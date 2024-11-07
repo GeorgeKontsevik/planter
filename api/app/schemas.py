@@ -17,7 +17,7 @@ class ClosestCitiesQueryParams(BaseModel):
         schema_extra = {
             "example": {
                 "industry_name": "Авиастроение и космическая отрасль",
-                "company_location": {"lat": 45.128569, "lon": 38.902091},
+                "company_location": {"lon": 45.128569, "lat": 38.902091},
                 "worker_and_count": [
                     {"speciality": "Технолог", "count": 80},
                     {"speciality": "Специалист по сертификации", "count": 50},

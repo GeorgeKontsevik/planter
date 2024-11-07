@@ -1,6 +1,6 @@
 # gdal==3.7.0
 Cython<3
-h3
+h3 < 4
 # catboost==1.2.2
 polyline
 fastapi==0.103.2

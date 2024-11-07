@@ -8,6 +8,6 @@ services:
     #   - .env
     volumes:
       - ./:/usr/api/
-    platform: linux/arm64
+    platform: linux/amd64
     ports:
-      - "8000:7000"
+      - "8000:8000"

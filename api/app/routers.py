@@ -65,9 +65,11 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParams):
     )
 
     data = list(map(get_routes, closest_cities["geometry"]))
+    # print(closest_cities)
 
     # # Создание GeoDataFrame
-    routes = gpd.GeoDataFrame(data)
+    # print(gpd.GeoDataFrame(data))
+    routes = gpd.GeoDataFrame(data, geometry="geometry")
 
     # # Установка CRS, если необходимо
     routes.set_crs(epsg=4326, inplace=True)

@@ -58,7 +58,6 @@ def find_n_closest_cities(
         # "duration",
         "geometry",
     ]
-
     selected_n_nearby_cities_gdf = selected_n_nearby_cities_gdf.loc[:, cols_to_keep]
 
     # Return the N closest cities (no distance calculation, just based on H3 proximity)
