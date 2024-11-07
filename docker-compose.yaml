@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  planter:
+    build: ./
+    image: gkontsevik/planter:0.0.1
+    # env_file:
+    #   - .env
+    volumes:
+      - ./:/usr/api/
+    platform: linux/arm64
+    ports:
+      - "8000:7000"
