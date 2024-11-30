@@ -9,7 +9,7 @@ WORKDIR /usr/api
 #     echo "Acquire::BrokenProxy    true;" >> /etc/apt/apt.conf.d/99custom
 
 # copy requirements file
-COPY ./requirements.txt /usr/api/app/requirements.txt
+COPY ./reqs.txt /usr/api/app/reqs.txt
 
 # install dependencies
 RUN set -eux \
@@ -27,7 +27,7 @@ RUN set -eux \
     # && pip cache purge \
     && pip install --no-cache-dir Cython \
     && pip install --upgrade pip setuptools wheel \
-    && pip install --no-cache-dir -r /usr/api/app/requirements.txt \
+    && pip install --no-cache-dir -r /usr/api/app/reqs.txt \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /root/.cache/pip
 

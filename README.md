@@ -23,7 +23,7 @@ search_radius_hours: 1.5
 - специальности специалистов и их кол-во:  
 ```
 industr_code: oil_and_gas_ext  
-specialities: {"Машинист": 200, "Оператор, аппаратчик": 300}
+specialties: {"Машинист": 200, "Оператор, аппаратчик": 300}
 ```  
 ![Example Image](/screenshots/2.%20closest_cities_params.png)
 
