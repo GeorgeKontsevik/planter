@@ -1,91 +1,10 @@
 # app/schemas.py
 
 from pydantic import BaseModel, Field, validator
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
 from .enums import IndustryEnum, SpecialtyEnum
 from datetime import datetime
 
-
-
-
-# -------------
-
-class ProjectBase(BaseModel):
-    name: Optional[str] = Field(default="Default Project Name")
-    industry_name: IndustryEnum
-
-
-class ProjectUpdate(BaseModel):
-    name: Optional[str] = None
-    industry_name: Optional[str] = None
-    company_location: Optional[Dict[str, float]] = None
-    n_hours: Optional[int] = None
-
-
-class Project(ProjectBase):
-    id: int
-    updated_at: datetime
-
-    class Config:
-        orm_mode = True
-
-class SpecialistCreate(BaseModel):
-    specialty: str  # Corrected from `specialities` to `specialty`
-    count: int       # Added `count` to represent the number of specialists
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "specialty": "engineer",
-                "count": 5
-            }
-        }
-
-class ProjectCreate(BaseModel):
-    name: str
-    industry_name: str
-    company_location: Dict[str, float]
-    n_hours: int
-    specialists: List[SpecialistCreate]
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "name": "Project Alpha",
-                "specialists": [
-                    {"specialty": "engineer", "count": 5},
-                    {"specialty": "manager", "count": 2}
-                ],
-                "n_hours": 2,
-                "industry_name": "aircraft_engineering",
-                "company_location": {"lng": 45.128569, "lat": 38.902091}
-            }
-        }
-
-# Схема для вывода специалистов
-class SpecialistOut(BaseModel):
-    project: int
-    specialty: str
-    count: int
-
-# Схема для вывода проекта
-class ProjectOut(BaseModel):
-    id: int
-    name: str
-    # specialists: List[SpecialistOut]
-
-    class Config:
-        orm_mode = True
-        schema_extra = {
-            "example": {
-                "id": 1,
-                "name": "Project Alpha",
-            }
-        }
-# Обновление ссылок для Pydantic
-Project.update_forward_refs()
-
-# --- Pydantic схемы для LAYERS --
 
 
 class LayerBase(BaseModel):
@@ -185,6 +104,112 @@ class LayerResponse(BaseModel):
 
     class Config:
         orm_mode = True
+
+class LayerOut(BaseModel):
+    id: int
+    name: str
+    geometry: Dict[str, Any]  # GeoJSON format
+    properties: Optional[Dict[str, Any]]
+
+    class Config:
+        orm_mode = True
+# -------------
+
+class ProjectBase(BaseModel):
+    name: Optional[str] = Field(default="Default Project Name")
+    industry_name: IndustryEnum
+
+
+class ProjectUpdate(BaseModel):
+    name: Optional[str] = None
+    industry_name: Optional[str] = None
+    company_location: Optional[Dict[str, float]] = None
+    n_hours: Optional[int] = None
+
+
+class Project(ProjectBase):
+    id: int
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class SpecialistCreate(BaseModel):
+    specialty: str  # Corrected from `specialities` to `specialty`
+    count: int       # Added `count` to represent the number of specialists
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "specialty": "engineer",
+                "count": 5
+            }
+        }
+
+class ProjectCreate(BaseModel):
+    name: str
+    industry_name: str
+    company_location: Dict[str, float]
+    n_hours: int
+    specialists: List[SpecialistCreate]
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "name": "Project Alpha",
+                "specialists": [
+                    {"specialty": "engineer", "count": 5},
+                    {"specialty": "manager", "count": 2}
+                ],
+                "n_hours": 2,
+                "industry_name": "aircraft_engineering",
+                "company_location": {"lng": 45.128569, "lat": 38.902091}
+            }
+        }
+
+class SpecialistOut(BaseModel):
+    id: int
+    specialty: str
+    count: int
+    project_id: int  # Explicitly add project_id instead of the full Project object
+
+    class Config:
+        orm_mode = True
+
+# Схема для вывода проекта
+class ProjectOut(BaseModel):
+    id: int
+    name: str
+    # specialists: List[SpecialistOut]
+
+    class Config:
+        orm_mode = True
+        schema_extra = {
+            "example": {
+                "id": 1,
+                "name": "Project Alpha",
+            }
+        }
+# Обновление ссылок для Pydantic
+
+class ProjectEverything(BaseModel):
+    id: int
+    name: str
+    industry_name: Optional[str]
+    n_hours: int
+    specialists: List[SpecialistOut]
+    layers: List[LayerOut]
+
+    class Config:
+        orm_mode = True
+
+
+Project.update_forward_refs()
+
+# --- Pydantic схемы для LAYERS --
+
+
+
 # ------------------------------------------------------
 
 class ClosestCitiesQueryParamsRequest(BaseModel):

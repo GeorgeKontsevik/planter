@@ -87,6 +87,22 @@ async def delete_project(project_id: int, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Project not found")
     return {"detail": "Project deleted successfully"}
 
+@router.get(
+    "/projects/{project_id}/everything",
+    response_model=schemas.ProjectEverything,
+    summary="Get project with everything",
+    description="Retrieve project details along with associated specialists, layers, and other related data",
+)
+async def get_project_everything(
+    project_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    proj_crud_instance = crud.ProjectCRUD(db)
+    project = await proj_crud_instance.get_project_with_everything(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
 # Список всех проектов
 # @router.get(
 #     "/projects/",

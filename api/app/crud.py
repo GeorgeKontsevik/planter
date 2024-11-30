@@ -99,6 +99,20 @@ class ProjectCRUD:
         await self.db.delete(project)
         await self.db.commit()
         return True
+    
+    async def get_project_with_everything(self, project_id: int):
+        stmt = (
+            select(models.Project)
+            .options(
+                joinedload(models.Project.specialists),  # Load specialists
+                joinedload(models.Project.layers),       # Load layers
+                # Add any additional relationships here if needed
+            )
+            .filter(models.Project.id == project_id)
+        )
+        result = await self.db.execute(stmt)
+        project = result.unique().scalar_one_or_none()  # Use `.unique()` to avoid duplicates
+        return project
 
     # async def list_projects(self):
     #     result = await self.db.execute(
