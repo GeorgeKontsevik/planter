@@ -79,18 +79,25 @@ async def update_project_specialists(
         raise HTTPException(status_code=404, detail="Project not found")
     return updated_project
 
+@router.delete("/projects/{project_id}", status_code=204)
+async def delete_project(project_id: int, db: AsyncSession = Depends(get_db)):
+    proj_crud_instance = crud.ProjectCRUD(db)
+    success = await proj_crud_instance.delete_project(project_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return {"detail": "Project deleted successfully"}
 
 # Список всех проектов
-@router.get(
-    "/projects/",
-    response_model=list[schemas.ProjectOut],
-    summary="Get all projects",
-    description="Retrieve a list of all projects with their specialists",
-)
-async def list_projects(db: AsyncSession = Depends(get_db)):
-    """
-    Получает список всех проектов и их специалистов.
-    """
-    proj_crud_instance = crud.ProjectCRUD(db)
-    projects = await proj_crud_instance.list_projects()
-    return projects
+# @router.get(
+#     "/projects/",
+#     response_model=list[schemas.ProjectOut],
+#     summary="Get all projects",
+#     description="Retrieve a list of all projects with their specialists",
+# )
+# async def list_projects(db: AsyncSession = Depends(get_db)):
+#     """
+#     Получает список всех проектов и их специалистов.
+#     """
+#     proj_crud_instance = crud.ProjectCRUD(db)
+#     projects = await proj_crud_instance.list_projects()
+#     return projects

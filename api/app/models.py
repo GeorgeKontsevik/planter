@@ -13,15 +13,6 @@ import logging
 logging.basicConfig()
 logging.getLogger("sqlalchemy.engine").setLevel(logging.DEBUG)
 
-# Association table for many-to-many relationship with count
-project_specialist_table = Table(
-    "project_specialists",
-    Base.metadata,
-    Column("project_id", Integer, ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True),
-    Column("specialist_id", Integer, ForeignKey("specialists.id", ondelete="CASCADE"), primary_key=True),
-    Column("count", Integer, nullable=False, default=0)  # Number of specialists per project
-)
-
 class Project(Base):
     __tablename__ = "projects"
 
@@ -44,21 +35,23 @@ class Project(Base):
         cascade="all, delete-orphan",
         passive_deletes=True, lazy="selectin"
     )
-    data = relationship("Data", back_populates="project", cascade="all, delete-orphan", lazy="selectin")
 
     # Связь с таблицей specialists
-    specialists = relationship("Specialist", back_populates="project", lazy="selectin", secondary=project_specialist_table)
+    specialists = relationship("Specialist", back_populates="project", lazy="selectin")
+
 
 class Specialist(Base):
     __tablename__ = "specialists"
     
     id = Column(Integer, primary_key=True, index=True)
-    specialty = Column(String, unique=True, nullable=False)
+    count = Column(Integer, primary_key=False, index=False, default=0)
+    specialty = Column(String, unique=False, nullable=False)
+    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     project = relationship(
         "Project",
-        secondary=project_specialist_table,
         back_populates="specialists"
     )
+
 
 class Layer(Base):
     __tablename__ = "layers"
@@ -75,14 +68,3 @@ class Layer(Base):
 
     # Связи
     project = relationship("Project", back_populates="layers")
-
-class Data(Base):
-    __tablename__ = "data"
-
-    id = Column(Integer, primary_key=True, index=True)
-    key = Column(String, nullable=False)
-    value = Column(JSON, nullable=False)
-    project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=True)
-
-    # Связи
-    project = relationship("Project", back_populates="data")

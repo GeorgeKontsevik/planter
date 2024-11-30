@@ -85,9 +85,106 @@ class ProjectOut(BaseModel):
 # Обновление ссылок для Pydantic
 Project.update_forward_refs()
 
-# --- Pydantic схемы для Data и Metrics ---
+# --- Pydantic схемы для LAYERS --
 
 
+class LayerBase(BaseModel):
+    name: str
+    geometry: Dict  # GeoJSON-like structure
+    properties: Optional[Dict] = None
+
+
+class LayerCreate(LayerBase):
+    project_id: int
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "name": "Building Footprint",
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [45.128569, 38.902091],
+                            [45.129569, 38.903091],
+                            [45.130569, 38.901091],
+                            [45.128569, 38.902091]
+                        ]
+                    ]
+                },
+                "properties": {
+                    "color": "blue",
+                    "material": "concrete"
+                },
+                "project_id": 1
+            }
+        }
+
+
+class LayerUpdate(BaseModel):
+    name: Optional[str]
+    geometry: Optional[Dict]
+    properties: Optional[Dict]
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "name": "Updated Layer Name",
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [45.128569, 38.902091],
+                            [45.129569, 38.903091],
+                            [45.130569, 38.901091],
+                            [45.128569, 38.902091]
+                        ]
+                    ]
+                },
+                "properties": {
+                    "color": "red",
+                    "material": "steel"
+                }
+            }
+        }
+
+
+class Layer(LayerBase):
+    id: int
+    project_id: int
+
+    class Config:
+        orm_mode = True
+        schema_extra = {
+            "example": {
+                "id": 10,
+                "name": "Layer Example",
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        [
+                            [45.128569, 38.902091],
+                            [45.129569, 38.903091],
+                            [45.130569, 38.901091],
+                            [45.128569, 38.902091]
+                        ]
+                    ]
+                },
+                "properties": {
+                    "key": "value"
+                },
+                "project_id": 1
+            }
+        }
+
+
+class LayerResponse(BaseModel):
+    id: int
+    name: str
+    project_id: int
+
+    class Config:
+        orm_mode = True
 # ------------------------------------------------------
 
 class ClosestCitiesQueryParamsRequest(BaseModel):
@@ -129,59 +226,3 @@ class OptimizeResponse(BaseModel):
     initial_migration: float
     optimized_migration: float
     optimal_parameters: Dict[str, float]
-
-
-# ------------------------------------------------------
-class DataBase(BaseModel):
-    key: str
-    value: dict  # или Any
-
-class DataCreate(DataBase):
-    pass
-
-class DataUpdate(BaseModel):
-    key: Optional[str] = None
-    value: Optional[dict] = None
-
-class DataRead(DataBase):
-    id: int
-
-    class Config:
-        orm_mode = True
-
-class MetricsRequest(BaseModel):
-    parameter1: float = Field(..., example=10.5)
-    parameter2: float = Field(..., example=20.3)
-
-
-class MetricsResponse(BaseModel):
-    metric1: float
-    metric2: float
-
-    class Config:
-        orm_mode = True
-
-
-class LayerBase(BaseModel):
-    name: str
-    geometry: str  # GeoJSON строка
-    properties: Optional[dict] = None
-    project_id: int  # Связь с Project
-
-class LayerCreate(LayerBase):
-    pass
-
-class LayerUpdate(BaseModel):
-    name: Optional[str] = None
-    geometry: Optional[str] = None
-    properties: Optional[dict] = None
-    project_id: Optional[int] = None
-
-class Layer(LayerBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime
-
-    class Config:
-        orm_mode = True
-
