@@ -85,13 +85,13 @@ async def create_layer(
     return new_layer
 
 
-@router.put("/{layer_id}", response_model=schemas.Layer)
-async def update_layer(layer_id: int, layer_data: schemas.LayerUpdate, db: AsyncSession = Depends(get_db)):
-    layer_crud = crud.LayerCRUD(db)
-    updated_layer = await layer_crud.update_layer(layer_id, layer_data.dict(exclude_unset=True))
-    if not updated_layer:
-        raise HTTPException(status_code=404, detail="Layer not found")
-    return updated_layer
+# @router.put("/{layer_id}", response_model=schemas.Layer)
+# async def update_layer(layer_id: int, layer_data: schemas.LayerUpdate, db: AsyncSession = Depends(get_db)):
+#     layer_crud = crud.LayerCRUD(db)
+#     updated_layer = await layer_crud.update_layer(layer_id, layer_data.dict(exclude_unset=True))
+#     if not updated_layer:
+#         raise HTTPException(status_code=404, detail="Layer not found")
+#     return updated_layer
 
 
 @router.delete("/{layer_id}", status_code=204)

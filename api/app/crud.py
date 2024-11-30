@@ -148,18 +148,18 @@ class LayerCRUD:
             "project_id": new_layer.project_id
             }
 
-    async def update_layer(self, layer_id: int, updated_data: dict):
-        # Update a specific layer
-        layer = await self.get_layer_by_id(layer_id)
-        if not layer:
-            return None
+    # async def update_layer(self, layer_id: int, updated_data: dict):
+    #     # Update a specific layer
+    #     layer = await self.get_layer_by_id(layer_id)
+    #     if not layer:
+    #         return None
 
-        for key, value in updated_data.items():
-            setattr(layer, key, value)
+    #     for key, value in updated_data.items():
+    #         setattr(layer, key, value)
 
-        await self.db.commit()
-        await self.db.refresh(layer)
-        return layer
+    #     await self.db.commit()
+    #     await self.db.refresh(layer)
+    #     return layer
 
     async def delete_layer(self, layer_id: int):
         # Delete a single layer

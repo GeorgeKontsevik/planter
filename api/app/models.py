@@ -37,7 +37,7 @@ class Project(Base):
     )
 
     # Связь с таблицей specialists
-    specialists = relationship("Specialist", back_populates="project", lazy="selectin")
+    specialists = relationship("Specialist", back_populates="project", lazy="selectin", cascade="all, delete-orphan")
 
 
 class Specialist(Base):
