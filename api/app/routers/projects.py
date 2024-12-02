@@ -62,22 +62,23 @@ async def get_project(project_id: int,
         raise HTTPException(status_code=404, detail="Project not found")
     return project
 
+
+
 @router.put(
     "/projects/{project_id}/specialists",
-    response_model=schemas.ProjectOut,
+    # response_model=schemas.ProjectOut,
     summary="Update project specialists",
-    description="Assign specialists to a project."
+    description="Assign specialists to a project and update their counts."
 )
 async def update_project_specialists(
     project_id: int,
     specialists_data: List[schemas.SpecialistCreate],
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     proj_crud_instance = crud.ProjectCRUD(db)
-    updated_project = await proj_crud_instance.update_project_specialists(project_id, specialists_data)
-    if not updated_project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    return updated_project
+    await proj_crud_instance.update_project_specialists(project_id, specialists_data)
+    return None
+
 
 @router.delete("/projects/{project_id}", status_code=204)
 async def delete_project(project_id: int, db: AsyncSession = Depends(get_db)):
@@ -90,18 +91,35 @@ async def delete_project(project_id: int, db: AsyncSession = Depends(get_db)):
 @router.get(
     "/projects/{project_id}/everything",
     response_model=schemas.ProjectEverything,
-    summary="Get project with everything",
-    description="Retrieve project details along with associated specialists, layers, and other related data",
+    summary="Get everything for a project",
+    description="Retrieve project details including specialists, layers, and other related entities",
 )
 async def get_project_everything(
     project_id: int,
     db: AsyncSession = Depends(get_db),
 ):
     proj_crud_instance = crud.ProjectCRUD(db)
-    project = await proj_crud_instance.get_project_with_everything(project_id)
+    layer_crud_instance = crud.LayerCRUD(db)
+    specialist_crud_instance = crud.SpecialistCRUD(db)
+
+    # Fetch project
+    project = await proj_crud_instance.get_project_by_id(project_id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    return project
+
+    # Fetch related entities
+    specialists = await specialist_crud_instance.get_specialists_by_project_id(project_id)
+    layers = await layer_crud_instance.get_layers_by_project(project_id)
+
+    # Assemble the response
+    return {
+        "id": project.id,
+        "name": project.name,
+        "industry_name": project.industry_name,
+        "n_hours": project.n_hours,
+        "specialists": specialists,
+        "layers": layers,
+    }
 
 # Список всех проектов
 # @router.get(

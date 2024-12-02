@@ -4,7 +4,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
-from .routers import closest, city, projects, layers
+from .routers import closest, optim, projects, layers, flows
 from .database import engine, get_db
 from . import models, schemas, crud
 
@@ -36,9 +36,10 @@ app.add_middleware(
 
 # Include Routers
 app.include_router(closest.router, prefix="/factory_api", tags=["Closest"])
-app.include_router(city.router, prefix="/factory_api", tags=["City"])
+app.include_router(optim.router, prefix="/factory_api", tags=["City"])
 app.include_router(projects.router, prefix="/factory_api", tags=["Projects"])
 app.include_router(layers.router, prefix="/factory_api", tags=["Layers"])
+app.include_router(flows.router, prefix="/factory_api", tags=["Flows"])
 
 
 

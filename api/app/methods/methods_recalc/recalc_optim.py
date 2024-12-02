@@ -1,7 +1,7 @@
 import optuna
 import numpy as np
 import pandas as pd
-from api.app.utils.data_reader import model, cities, scaler_x
+from api.app.utils.data_reader import model, cities
 from api.app.utils.constants import CITY_MODEL_PARAMS
 from api.app.methods.methods_recalc._model_preprocesser import preprocess_x
 from functools import partial

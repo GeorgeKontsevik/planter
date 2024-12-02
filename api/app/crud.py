@@ -11,10 +11,17 @@ from sqlalchemy import text
 import traceback
 from sqlalchemy.dialects.postgresql import insert
 from geoalchemy2 import WKTElement
+from geoalchemy2.shape import to_shape
+from shapely.geometry import mapping
 
 import logging
 logging.basicConfig()
 logging.getLogger("sqlalchemy.engine").setLevel(logging.DEBUG)
+
+def serialize_geometry(geometry):
+    if geometry:
+        return mapping(to_shape(geometry))  # Convert to GeoJSON-like dictionary
+    return None
 
 # --- CRUD для Project ---
 class ProjectCRUD:
@@ -65,29 +72,28 @@ class ProjectCRUD:
         return {"id": new_project.id, "name": new_project.name}
 
     async def update_project_specialists(self, project_id: int, specialists_data: list):
-    # Fetch the project
+        # Fetch the project
         project = await self.get_project_by_id(project_id)
         if not project:
             return None
 
         for s_data in specialists_data:
+            s_data = s_data.dict()
             # Ensure uniqueness in the specialists table
             stmt_specialist = insert(models.Specialist).values(
-                specialty=s_data["specialty"]
-            ).on_conflict_do_nothing()  # Ignore if the specialty already exists
-            await self.db.execute(stmt_specialist)
-
-            # Retrieve the specialist ID (after insert or from existing entry)
-            await self.db.execute(
-                select(models.Specialist).where(models.Specialist.specialty == s_data["specialty"])
+                specialty=s_data["specialty"], project_id=project_id,
+                count = s_data['count']
             ).on_conflict_do_update(
-                index_elements=["project_id", "id"],  # Composite unique key
-                set_={"count": s_data["count"]}
-            )
+            index_elements=["specialty", "project_id"],  # Ensure uniqueness
+            set_={
+                "count": s_data['count']
+            })  # Ignore if the specialty already exists
+            await self.db.execute(stmt_specialist)
 
         await self.db.commit()
         await self.db.refresh(project)
-        return project
+
+        return None
     
     async def delete_project(self, project_id: int):
         # Fetch the project
@@ -99,20 +105,6 @@ class ProjectCRUD:
         await self.db.delete(project)
         await self.db.commit()
         return True
-    
-    async def get_project_with_everything(self, project_id: int):
-        stmt = (
-            select(models.Project)
-            .options(
-                joinedload(models.Project.specialists),  # Load specialists
-                joinedload(models.Project.layers),       # Load layers
-                # Add any additional relationships here if needed
-            )
-            .filter(models.Project.id == project_id)
-        )
-        result = await self.db.execute(stmt)
-        project = result.unique().scalar_one_or_none()  # Use `.unique()` to avoid duplicates
-        return project
 
     # async def list_projects(self):
     #     result = await self.db.execute(
@@ -124,6 +116,7 @@ class ProjectCRUD:
 class LayerCRUD:
     def __init__(self, db: AsyncSession):
         self.db = db
+
 
     async def get_layer_by_id(self, layer_id: int):
         # Fetch a single layer by ID
@@ -137,7 +130,19 @@ class LayerCRUD:
         result = await self.db.execute(
             select(models.Layer).filter(models.Layer.project_id == project_id)
         )
-        return result.scalars().all()
+        layers = result.scalars().all()
+
+        # Serialize geometry for each layer
+        return [
+            {
+                "id": layer.id,
+                "name": layer.name,
+                "project_id": layer.project_id,
+                "geometry": serialize_geometry(layer.geometry),
+                "properties": layer.properties,
+            }
+            for layer in layers
+        ]
 
     async def create_layer(self, layer_data: dict):
         
@@ -195,3 +200,18 @@ class LayerCRUD:
             await self.db.delete(layer)
         await self.db.commit()
         return True
+
+class SpecialistCRUD:
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def get_specialists_by_project_id(self, project_id: int):
+        """
+        Fetch all specialists associated with a specific project.
+        """
+        stmt = (
+            select(models.Specialist)
+            .filter(models.Specialist.project_id == project_id)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().all()

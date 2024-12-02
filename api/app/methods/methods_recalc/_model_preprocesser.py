@@ -15,10 +15,8 @@ from api.app.utils.data_reader import cities
 from api.app.utils.constants import MASK_X, MASK_Y
 
 
-scaler_x = MinMaxScaler()
 
-
-def preprocess_x(df, fit=False):
+def preprocess_x(df, scaler_x, fit=False):
     """
     По факту просто маска и скейлер
     """
@@ -81,7 +79,7 @@ if __name__ == "__main__":
 
     scaler_x = MinMaxScaler()
 
-    X_scaled = preprocess_x(cities, fit=True)
+    X_scaled = preprocess_x(cities, scaler_x, fit=True)
     y = preprocess_y(cities)
 
     # Split data into training and test sets

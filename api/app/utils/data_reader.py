@@ -18,7 +18,7 @@ with open(
     model = pickle.load(file)  # Загружаем модель
 
 
-with open(
-    "api/app/data/scaler_x.pkl", "rb"
-) as file:  # Открываем файл в бинарном режиме для чтения
-    scaler_x = pickle.load(file)  # Загружаем модель
+# with open(
+#     "api/app/data/scaler_x.pkl", "rb"
+# ) as file:  # Открываем файл в бинарном режиме для чтения
+#     scaler_x = pickle.load(file)  # Загружаем модель

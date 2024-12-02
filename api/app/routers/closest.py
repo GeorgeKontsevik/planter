@@ -1,73 +1,78 @@
-""" some docstring """
-
 import faulthandler
-
-# import pandas as pd
 import geopandas as gpd
 import json
+import shapely.geometry
 
-# import joblib as jbl
-# from fastapi.responses import JSONResponse
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Depends
+from pydantic import BaseModel
+from typing import List
 
-# from enum import auto
-from api.app import schemas
-
-# from api.app.jhm_metric_calcs.jhm_metric import main
-
-# from app.routers_utils import validate_company_location, validate_workers_salary
-from api.app.utils.data_reader import (
-    # ontology,
-    # grads,
-    cities,
-    # cv,
-    # model,
-)
-
+from api.app.utils.data_reader import cities
 from api.app.methods.methods_get_closest.select_closest_cities import find_n_closest_cities
 from api.app.methods.methods_get_closest.route_api_caller import get_route
+from api.app import schemas
 
-import shapely
-
-router = APIRouter()
 faulthandler.enable()
 
-
-@router.get("/")
-async def read_root():
-    """some docstring"""
-    return {"Hello": "World"}
+router = APIRouter()
 
 
-@router.post("/plant/get_closest_cities", response_model=dict)
+# Define schemas for response models
+class CityEstimate(BaseModel):
+    id: int
+    name: str
+    hours: float
+    geometry: dict  # GeoJSON-like structure
+
+
+class Link(BaseModel):
+    duration: float
+    distance: float
+    geometry: dict  # GeoJSON-like structure
+
+
+class ClosestCitiesResponse(BaseModel):
+    estimates: List[CityEstimate]
+    links: List[Link]
+
+
+@router.post(
+    "/plant/get_closest_cities",
+    response_model=ClosestCitiesResponse,
+    summary="Get Closest Cities",
+    description="Find closest cities within a given time radius and retrieve travel routes.",
+)
 def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest):
-
-    # worker_and_count = query_params.worker_and_count
-    # industry_name = query_params.industry_name
-
-    point = query_params.company_location
-    point = shapely.geometry.Point(point["lon"], point["lng"])
+    """
+    Endpoint to retrieve closest cities and their travel routes based on the provided query parameters.
+    """
+    point_data = query_params.company_location
+    point = shapely.geometry.Point(point_data["lon"], point_data["lng"])
     hour_radius = query_params.n_hours
 
-    closest_cities = find_n_closest_cities(
-        point=point, gdf_cities=cities, search_radius_in_h=hour_radius
-    )
+    # Find closest cities
+    try:
+        closest_cities = find_n_closest_cities(
+            point=point, gdf_cities=cities, search_radius_in_h=hour_radius
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Error finding closest cities: {e}")
 
-    get_routes = lambda city: get_route(
-        start_coords=(point.x, point.y), end_coords=(city.x, city.y)
-    )
+    # Get routes for closest cities
+    try:
+        get_routes = lambda city: get_route(
+            start_coords=(point.x, point.y), end_coords=(city.x, city.y)
+        )
+        route_data = list(map(get_routes, closest_cities["geometry"]))
+        routes = gpd.GeoDataFrame(route_data, geometry="geometry")
+        routes.set_crs(epsg=4326, inplace=True)
+        closest_cities.loc[:, "hours"] = routes["duration"].values
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching route data: {e}")
 
-    data = list(map(get_routes, closest_cities["geometry"]))
-
-    # # Создание GeoDataFrame
-    routes = gpd.GeoDataFrame(data, geometry="geometry")
-
-    # # Установка CRS, если необходимо
-    routes.set_crs(epsg=4326, inplace=True)
-    closest_cities.loc[:, "hours"] = routes["duration"].values
-
-    return {
+    # Prepare the response
+    response = {
         "estimates": json.loads(closest_cities.to_json()),
         "links": json.loads(routes.to_json()),
-        # "links": result["links"],
     }
+    return response

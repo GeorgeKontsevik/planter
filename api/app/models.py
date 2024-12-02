@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from geoalchemy2 import Geometry
 from sqlalchemy.sql import func
+from sqlalchemy.schema import UniqueConstraint
 from api.app.enums import IndustryEnum, SpecialtyEnum
 
 Base = declarative_base()
@@ -47,6 +48,9 @@ class Specialist(Base):
     count = Column(Integer, primary_key=False, index=False, default=0)
     specialty = Column(String, unique=False, nullable=False)
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+    __table_args__ = (
+        UniqueConstraint("specialty", "project_id", name="unique_specialist_project"),
+    )
     project = relationship(
         "Project",
         back_populates="specialists"
