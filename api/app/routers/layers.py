@@ -12,25 +12,6 @@ from pydantic import BaseModel
 
 router = APIRouter(prefix="/layers", tags=["Layers"])
 
-@router.get("/{layer_id}", response_model=schemas.Layer)
-async def get_layer(layer_id: int, db: AsyncSession = Depends(get_db)):
-    layer_crud = crud.LayerCRUD(db)
-    layer = await layer_crud.get_layer_by_id(layer_id)
-    if not layer:
-        raise HTTPException(status_code=404, detail="Layer not found")
-    return layer
-
-
-@router.get("/project/{project_id}", response_model=List[schemas.Layer])
-async def get_layers_by_project(project_id: int, db: AsyncSession = Depends(get_db)):
-    layer_crud = crud.LayerCRUD(db)
-    layers = await layer_crud.get_layers_by_project(project_id)
-    if not layers:
-        raise HTTPException(status_code=404, detail="No layers found for this project")
-    return layers
-
-
-
 @router.post(
     "/",
     response_model=schemas.LayerResponse,
@@ -83,6 +64,27 @@ async def create_layer(
     layer_crud = crud.LayerCRUD(db)
     new_layer = await layer_crud.create_layer(layer_data.dict())
     return new_layer
+
+@router.get("/{layer_id}", response_model=schemas.Layer)
+async def get_layer(layer_id: int, db: AsyncSession = Depends(get_db)):
+    layer_crud = crud.LayerCRUD(db)
+    layer = await layer_crud.get_layer_by_id(layer_id)
+    if not layer:
+        raise HTTPException(status_code=404, detail="Layer not found")
+    return layer
+
+
+@router.get("/{project_id}", response_model=List[schemas.Layer])
+async def get_layers_by_project(project_id: int, db: AsyncSession = Depends(get_db)):
+    layer_crud = crud.LayerCRUD(db)
+    layers = await layer_crud.get_layers_by_project(project_id)
+    if not layers:
+        raise HTTPException(status_code=404, detail="No layers found for this project")
+    return layers
+
+
+
+
 
 
 # @router.put("/{layer_id}", response_model=schemas.Layer)

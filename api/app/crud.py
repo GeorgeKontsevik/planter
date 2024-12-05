@@ -3,7 +3,7 @@
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from api.app import models, schemas
-from geoalchemy2.shape import from_shape
+from geoalchemy2.shape import from_shape, to_shape
 from shapely.geometry import Point, shape
 import json
 from sqlalchemy.orm import joinedload
@@ -123,7 +123,11 @@ class LayerCRUD:
         result = await self.db.execute(
             select(models.Layer).filter(models.Layer.id == layer_id)
         )
-        return result.scalar_one_or_none()
+        layer = result.scalar_one_or_none()
+        if layer:
+            # Serialize geometry to GeoJSON
+            layer.geometry = to_shape(layer.geometry).__geo_interface__
+        return layer
 
     async def get_layers_by_project(self, project_id: int):
         # Fetch all layers associated with a specific project

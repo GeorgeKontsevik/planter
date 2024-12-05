@@ -1,14 +1,13 @@
 # app/main.py
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
 from .routers import closest, optim, projects, layers, flows
-from .database import engine, get_db
-from . import models, schemas, crud
+from .database import engine
+from . import models
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.responses import JSONResponse
 
 

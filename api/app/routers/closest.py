@@ -3,18 +3,30 @@ import geopandas as gpd
 import json
 import shapely.geometry
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Body
 from pydantic import BaseModel
-from typing import List
+import pandas as pd
 
 from api.app.utils.data_reader import cities
 from api.app.methods.methods_get_closest.select_closest_cities import find_n_closest_cities
+from api.app.methods.methods_estimate.estimator import closest_city_params
 from api.app.methods.methods_get_closest.route_api_caller import get_route
 from api.app import schemas
+
+# from api.app.methods.methods_estimate.estimator import 
 
 faulthandler.enable()
 
 router = APIRouter()
+
+cities = gpd.read_parquet(
+    "api/app/data/cities.parquet"
+)
+
+ontology = pd.read_pickle("api/app/data/new_ontology.pkl")
+
+grouped_grads = pd.read_pickle("api/app/data/grouped_grads.pkl")
+
 
 
 # Define schemas for response models
@@ -31,14 +43,8 @@ class Link(BaseModel):
     geometry: dict  # GeoJSON-like structure
 
 
-class ClosestCitiesResponse(BaseModel):
-    estimates: List[CityEstimate]
-    links: List[Link]
-
-
 @router.post(
     "/plant/get_closest_cities",
-    response_model=ClosestCitiesResponse,
     summary="Get Closest Cities",
     description="Find closest cities within a given time radius and retrieve travel routes.",
 )
@@ -76,3 +82,26 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest):
         "links": json.loads(routes.to_json()),
     }
     return response
+
+
+# Example router for competitor analysis
+@router.post("/closest_city_params")
+def competitor_analysis(
+    uinput_spec_num: dict,
+    uinput_industry: str,
+    workforce_type: str,
+    # ontology: dict,  # Convert this to a DataFrame before passing to the function
+    # cities: dict,  # Convert this to a DataFrame before passing to the function
+    # grouped_grads: dict,  # Convert this to a DataFrame before passing to the function
+):
+    try:
+        ontology_df = pd.DataFrame(ontology)
+        cities_df = pd.DataFrame(cities)
+        grouped_grads_df = pd.DataFrame(grouped_grads)
+
+        result = closest_city_params(
+            uinput_spec_num, uinput_industry, ontology_df, cities_df, grouped_grads_df
+        )
+        return result.to_dict(orient="records")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {e}")

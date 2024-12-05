@@ -1,8 +1,8 @@
 # app/schemas.py
 
 from pydantic import BaseModel, Field, validator
-from typing import List, Optional, Dict, Any
-from .enums import IndustryEnum, SpecialtyEnum
+from typing import List, Optional, Dict, Any, Union
+from .enums import IndustryEnum, SpecialtyEnum, WorkforceTypeEnum
 from datetime import datetime
 
 
@@ -150,8 +150,9 @@ class ProjectCreate(BaseModel):
     name: str
     industry_name: str
     company_location: Dict[str, float]
-    n_hours: int
+    n_hours: float = Field(..., lt=3)
     specialists: List[SpecialistCreate]
+    workforce_type: str = WorkforceTypeEnum
 
     class Config:
         schema_extra = {
@@ -161,6 +162,7 @@ class ProjectCreate(BaseModel):
                     {"specialty": "engineer", "count": 5},
                     {"specialty": "manager", "count": 2}
                 ],
+                "workforce_type":"all",
                 "n_hours": 2,
                 "industry_name": "aircraft_engineering",
                 "company_location": {"lng": 45.128569, "lat": 38.902091}
@@ -180,6 +182,8 @@ class SpecialistOut(BaseModel):
 class ProjectOut(BaseModel):
     id: int
     name: str
+    industry_name: str
+    n_hours:float
     # specialists: List[SpecialistOut]
 
     class Config:
@@ -188,6 +192,8 @@ class ProjectOut(BaseModel):
             "example": {
                 "id": 1,
                 "name": "Project Alpha",
+                "industry_name": "Very High Tech Industry",
+                "n_hours":1
             }
         }
 # Обновление ссылок для Pydantic
@@ -203,6 +209,13 @@ class ProjectEverything(BaseModel):
     class Config:
         orm_mode = True
 
+class ProjectSummary(BaseModel):
+    id: int
+    name: str
+    industry_name: str
+
+    class Config:
+        orm_mode = True
 
 Project.update_forward_refs()
 
@@ -213,23 +226,19 @@ Project.update_forward_refs()
 # ------------------------------------------------------
 
 class ClosestCitiesQueryParamsRequest(BaseModel):
-    worker_and_count: List
-    industry_name: IndustryEnum
-    company_location: Dict[str, float]
-    n_hours: float
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "industry_name": "aircraft_engineering",
-                "company_location": {"lng": 45.128569, "lon": 38.902091},
-                "worker_and_count": [
-                    {"specialty": "Технолог", "count": 80},
-                    {"specialty": "Специалист по сертификации", "count": 50},
-                ],
-                "n_hours": 1.5,
-            }
-        }
+    specialists: List[Dict[str, Union[SpecialtyEnum, int]]] = Field(
+        ...,
+        example=[
+            {"specialty": "technologist", "count": 80},
+            {"specialty": "certification_specialist", "count": 50},
+        ],
+    )
+    industry_name: IndustryEnum = Field(..., example="shipbuilding")
+    company_location: Dict[str, float] = Field(
+        ...,
+        example={"lng": 45.128569, "lon": 38.902091},
+    )
+    n_hours: float = Field(..., example=1.5)
 
 
 class UpdateParams(BaseModel):

@@ -37,8 +37,6 @@ if filename in os.listdir(directory):
     filepath = os.path.join(directory, 'cities.parquet')
     cities = gpd.read_parquet(filepath)
 
-    print(scaler_x)
-
     
     filepath = os.path.join(directory, filename)
     wff = WorkForceFlows.from_pickle(filepath)

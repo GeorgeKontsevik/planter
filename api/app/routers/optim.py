@@ -18,8 +18,6 @@ from ..methods.methods_recalc.recalc_optim import objective
 router = APIRouter(
     prefix="/cities",
     tags=["City"],
-    dependencies=[Depends(get_current_user)],  # Secure all endpoints
-    responses={404: {"description": "Not found"}},
 )
 
 # Configure logging

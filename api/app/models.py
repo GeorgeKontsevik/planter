@@ -1,12 +1,12 @@
 # app/models.py
 
-from sqlalchemy import Column, Integer, String, JSON, ForeignKey, DateTime, Float, Table
+from sqlalchemy import Column, Integer, String, JSON, ForeignKey, DateTime, Float, Table, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from geoalchemy2 import Geometry
 from sqlalchemy.sql import func
 from sqlalchemy.schema import UniqueConstraint
-from api.app.enums import IndustryEnum, SpecialtyEnum
+from api.app.enums import IndustryEnum, SpecialtyEnum, WorkforceTypeEnum
 
 Base = declarative_base()
 
@@ -24,7 +24,13 @@ class Project(Base):
 
     # specialties = Column(JSON, nullable=False)  # Список из Enum
     industry_name = Column(String, nullable=True)  # Дополнительное название индустрии
-    n_hours = Column(Integer, default=0, nullable=True)  # Дополнительное поле часов
+    n_hours = Column(Float, default=0, nullable=True)  # Дополнительное поле часов
+    workforce_type = Column(String, nullable=True)
+    specialists_total = Column(Float, nullable=True)
+    graduates_total = Column(Float, nullable=True)
+    all_total = Column(Float, nullable=True)
+    metric_bool = Column(Boolean, nullable=True)
+    metric_float = Column(Float, nullable=True)
 
     # Геометрия
     geometry = Column(Geometry(geometry_type='POINT', srid=4326), nullable=False)
