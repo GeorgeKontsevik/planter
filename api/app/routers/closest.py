@@ -5,13 +5,16 @@ import shapely.geometry
 
 from fastapi import APIRouter, HTTPException, Depends, Body
 from pydantic import BaseModel
+from typing import Dict
 import pandas as pd
+
 
 from api.app.utils.data_reader import cities
 from api.app.methods.methods_get_closest.select_closest_cities import find_n_closest_cities
 from api.app.methods.methods_estimate.estimator import closest_city_params
 from api.app.methods.methods_get_closest.route_api_caller import get_route
 from api.app import schemas
+from api.app.enums import SpecialtyEnum, IndustryEnum, WorkforceTypeEnum
 
 # from api.app.methods.methods_estimate.estimator import 
 
@@ -48,7 +51,12 @@ class Link(BaseModel):
     summary="Get Closest Cities",
     description="Find closest cities within a given time radius and retrieve travel routes.",
 )
-def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest):
+def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
+    workforce_type: WorkforceTypeEnum = 'graduates'):
+
+    # ontology: dict,  # Convert this to a DataFrame before passing to the function
+    # cities: dict,  # Convert this to a DataFrame before passing to the function
+    # grouped_grads: dict,  # Convert this to a DataFrame before passing to the function):
     """
     Endpoint to retrieve closest cities and their travel routes based on the provided query parameters.
     """
@@ -76,32 +84,42 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching route data: {e}")
 
-    # Prepare the response
-    response = {
-        "estimates": json.loads(closest_cities.to_json()),
-        "links": json.loads(routes.to_json()),
-    }
-    return response
-
-
-# Example router for competitor analysis
-@router.post("/closest_city_params")
-def competitor_analysis(
-    uinput_spec_num: dict,
-    uinput_industry: str,
-    workforce_type: str,
-    # ontology: dict,  # Convert this to a DataFrame before passing to the function
-    # cities: dict,  # Convert this to a DataFrame before passing to the function
-    # grouped_grads: dict,  # Convert this to a DataFrame before passing to the function
-):
     try:
         ontology_df = pd.DataFrame(ontology)
         cities_df = pd.DataFrame(cities)
         grouped_grads_df = pd.DataFrame(grouped_grads)
 
-        result = closest_city_params(
-            uinput_spec_num, uinput_industry, ontology_df, cities_df, grouped_grads_df
-        )
-        return result.to_dict(orient="records")
+        params = closest_city_params(
+            query_params.specialists, query_params.industry_name, grouped_grads_df, ontology_df, cities_df
+        ).reset_index(drop=False).drop(columns=['factories_total', 'population'])
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Analysis failed: {e}")
+    # print(params)
+
+    map_workforce = {
+        'specialists': ['CV'],
+        'graduates': ['ВПО'],
+        'all': ['CV', 'ВПО']
+    }
+    mask_type_workforce = params['type'].isin(map_workforce[workforce_type])
+    mask_cities = params['cluster_center'].isin(closest_cities['region_city'])
+    params = params[mask_type_workforce & mask_cities]
+
+    print(json.loads(params.to_json()))
+
+        # Prepare the response
+    closest_cities = closest_cities.drop(columns=['ueqi_score', 'h3_index']).merge(params, left_on='region_city', right_on='cluster_center', how='left')
+    closest_cities["working_population"] = (
+        (closest_cities["population"] * 0.65).round(0).fillna(0).astype(int)
+    )
+    
+    """Here should be the exact formula of this param calcs"""
+    plant_assessment_val = 1
+
+    response = {
+        "estimates": json.loads(closest_cities.to_json()),
+        "links": json.loads(routes.to_json()),
+        "plant_assessment_val": plant_assessment_val
+    }
+    return response
+        

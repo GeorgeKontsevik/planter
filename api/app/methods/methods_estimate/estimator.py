@@ -1,5 +1,6 @@
 import geopandas as gpd
 import pandas as pd
+from typing import List
 
 # uinput_industry -- input industry
 # uinput_spec_num -- input dict of specs and their num
@@ -18,7 +19,7 @@ import pandas as pd
 
 
 def closest_city_params(
-    uinput_spec_num: dict, uinput_industry: str, grouped_grads, ontology, cities
+    uinput_spec_num: List[dict], uinput_industry: str, grouped_grads, ontology, cities
 ) -> pd.DataFrame:
     """
     Perform competitor analysis and enrich the grouped_grads DataFrame with competitor-related metrics.
@@ -37,17 +38,23 @@ def closest_city_params(
     competitor_industries = []
     competitor_fatories = []
 
-    for k in uinput_spec_num.keys():
-        uinput_spec_num_2[k] = (
-            ontology.loc[ontology["speciality"] == k, "edu_group_id"]
-            .drop_duplicates()
-            .values.tolist()
-        )
-        competitor_industries += (
-            ontology.loc[ontology["speciality"] == k, "industry_code"]
-            .drop_duplicates()
-            .tolist()
-        )
+    # print('\n\n\n\n\n\n\n', ontology.columns)
+
+    for dct in uinput_spec_num:
+        kk = dct.keys()
+        for k in kk:
+            uinput_spec_num_2[k] = (
+                ontology.loc[ontology["speciality"] == k, "edu_group_id"]
+                .drop_duplicates()
+                .values.tolist()
+            )
+            competitor_industries += (
+                ontology.loc[ontology["speciality"] == k, "industry_code"]
+                .drop_duplicates()
+                .tolist()
+            )
+
+    # print('\n\n\n\n\n\n\n', uinput_spec_num_2, competitor_industries, grouped_grads.columns)
 
     # Remove the input industry from the competitors
     competitor_industries = set(competitor_industries)
@@ -71,7 +78,7 @@ def closest_city_params(
     # Enrich grouped_grads
     grouped_grads = (
         grouped_grads.reset_index(drop=False)
-        .groupby(["cluster_center", "type"])[["city_capacity_grads_and_cv_sum", "count"]]
+        .groupby(["cluster_center", "type"])[["city_capacity_grads_and_cv_sum", "cv_count"]]
         .sum()
         .join(
             cities[
@@ -87,35 +94,31 @@ def closest_city_params(
         )
     )
 
-    grouped_grads[
-        [
-            "num_in_migration",
-            "graduates_oil_and_gas_ext",
-            "factories_oil_and_gas_ext",
-            "factories_total",
-            "city_capacity_grads_and_cv_sum",
-            "population",
-            "competitors_factories_num",
-        ]
-    ] = (
-        grouped_grads[
-            [
-                "num_in_migration",
-                "graduates_oil_and_gas_ext",
-                "factories_oil_and_gas_ext",
-                "factories_total",
-                "city_capacity_grads_and_cv_sum",
-                "population",
-                "competitors_factories_num",
-            ]
-        ]
-        .round(0)
-        .fillna(0)
-        .astype(int)
-    )
-
-    grouped_grads["working_population"] = (
-        (grouped_grads["population"] * 0.65).round(0).astype(int)
-    )
+    # grouped_grads[
+    #     [
+    #         "num_in_migration",
+    #         "graduates_oil_and_gas_ext",
+    #         "factories_oil_and_gas_ext",
+    #         "factories_total",
+    #         "city_capacity_grads_and_cv_sum",
+    #         "population",
+    #         "competitors_factories_num",
+    #     ]
+    # ] = (
+    #     grouped_grads[
+    #         [
+    #             "num_in_migration",
+    #             "graduates_oil_and_gas_ext",
+    #             "factories_oil_and_gas_ext",
+    #             "factories_total",
+    #             "city_capacity_grads_and_cv_sum",
+    #             "population",
+    #             "competitors_factories_num",
+    #         ]
+    #     ]
+    #     .round(0)
+    #     .fillna(0)
+    #     .astype(int)
+    # )
 
     return grouped_grads

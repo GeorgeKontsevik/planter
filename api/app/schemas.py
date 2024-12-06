@@ -237,8 +237,8 @@ class ClosestCitiesQueryParamsRequest(BaseModel):
     specialists: List[Dict[str, Union[SpecialtyEnum, int]]] = Field(
         ...,
         example=[
-            {"specialty": "technologist", "count": 80},
-            {"specialty": "certification_specialist", "count": 50},
+            {"specialty": "Монтажник", "count": 80},
+            {"specialty": "Инженер-конструктор", "count": 180}
         ],
     )
     industry_name: IndustryEnum = Field(..., example="shipbuilding")
