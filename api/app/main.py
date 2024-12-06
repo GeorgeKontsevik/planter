@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 
-from .routers import closest, optim, projects, layers, flows
+from .routers import closest, optim, projects, layers, flows, tooltip
 from .database import engine
 from . import models
 
@@ -34,11 +34,12 @@ app.add_middleware(
 )
 
 # Include Routers
+app.include_router(tooltip.router, prefix="/factory_api", tags=["Tooltip"])
 app.include_router(closest.router, prefix="/factory_api", tags=["Closest"])
 app.include_router(optim.router, prefix="/factory_api", tags=["City"])
 app.include_router(projects.router, prefix="/factory_api", tags=["Projects"])
 app.include_router(layers.router, prefix="/factory_api", tags=["Layers"])
-app.include_router(flows.router, prefix="/factory_api", tags=["Flows"])
+app.include_router(flows.router, prefix="/factory_api", tags=["City"])
 
 
 

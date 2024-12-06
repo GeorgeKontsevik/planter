@@ -14,7 +14,6 @@ import random
 import shapely
 import folium
 from shapely.geometry import LineString
-from pandarallel import pandarallel
 import pickle
 
 # Initialize pandarallel

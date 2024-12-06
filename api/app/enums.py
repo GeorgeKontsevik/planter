@@ -1,9 +1,9 @@
 from enum import Enum
 
 class WorkforceTypeEnum(str, Enum):
-    SPECIALISTS: 'cv'
-    GRADUATES: 'grads'
-    ALL: 'cv_grads'
+    SPECIALISTS = 'specialists'
+    GRADUATES = 'graduates'
+    ALL = f"all"
 
 class IndustryEnum(str, Enum):
     MINING_OIL_GAS = "oil_and_gas_ext"

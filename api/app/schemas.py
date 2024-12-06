@@ -1,6 +1,6 @@
 # app/schemas.py
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any, Union
 from .enums import IndustryEnum, SpecialtyEnum, WorkforceTypeEnum
 from datetime import datetime
@@ -135,13 +135,13 @@ class Project(ProjectBase):
         orm_mode = True
 
 class SpecialistCreate(BaseModel):
-    specialty: str  # Corrected from `specialities` to `specialty`
+    specialty: SpecialtyEnum  # Corrected from `specialities` to `specialty`
     count: int       # Added `count` to represent the number of specialists
 
     class Config:
         schema_extra = {
             "example": {
-                "specialty": "engineer",
+                "specialty": "Оператор, аппаратчик",
                 "count": 5
             }
         }
@@ -152,7 +152,7 @@ class ProjectCreate(BaseModel):
     company_location: Dict[str, float]
     n_hours: float = Field(..., lt=3)
     specialists: List[SpecialistCreate]
-    workforce_type: str = WorkforceTypeEnum
+    workforce_type: WorkforceTypeEnum
 
     class Config:
         schema_extra = {
@@ -184,6 +184,7 @@ class ProjectOut(BaseModel):
     name: str
     industry_name: str
     n_hours:float
+    geometry: Any  # GeoJSON format
     # specialists: List[SpecialistOut]
 
     class Config:
@@ -205,6 +206,13 @@ class ProjectEverything(BaseModel):
     n_hours: int
     specialists: List[SpecialistOut]
     layers: List[LayerOut]
+
+    class Config:
+        orm_mode = True
+
+class ProjectInOut(BaseModel):
+    id: int
+    name: str
 
     class Config:
         orm_mode = True
@@ -238,7 +246,7 @@ class ClosestCitiesQueryParamsRequest(BaseModel):
         ...,
         example={"lng": 45.128569, "lon": 38.902091},
     )
-    n_hours: float = Field(..., example=1.5)
+    n_hours: float = Field(..., example=1.5, lt=3)
 
 
 class UpdateParams(BaseModel):
@@ -260,3 +268,17 @@ class OptimizeResponse(BaseModel):
     initial_migration: float
     optimized_migration: float
     optimal_parameters: Dict[str, float]
+
+class SpecialistAdd(BaseModel):
+    specialty: SpecialtyEnum
+    count: int
+
+class SpecialistUpdate(BaseModel):
+    id: int
+    specialty: Optional[SpecialtyEnum] = None
+    count: Optional[int] = None
+
+class ModifySpecialistsRequest(BaseModel):
+    add: List[SpecialistAdd] = []
+    update: List[SpecialistUpdate] = []
+    delete: List[int] = []

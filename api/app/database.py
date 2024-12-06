@@ -40,4 +40,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         try:
             yield session
         finally:
+            # Ensure proper cleanup
+            if session.in_transaction():
+                await session.rollback()
             await session.close()

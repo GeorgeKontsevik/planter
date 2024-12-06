@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Body, Response
+from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from typing import Dict, Optional
 import os
@@ -43,7 +43,6 @@ if filename in os.listdir(directory):
     wff['cities'] = cities
     wff['scaler'] = scaler_x
     wff['model'] = model_gravity
-    
     
 else:
     raise FileNotFoundError(f"The file {filename} was not found in the directory {directory}.")
