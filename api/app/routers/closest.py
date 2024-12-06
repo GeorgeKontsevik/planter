@@ -108,9 +108,10 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
     print(json.loads(params.to_json()))
 
         # Prepare the response
+    WORKING_POPULATION_PERCENT = .65
     closest_cities = closest_cities.drop(columns=['ueqi_score', 'h3_index']).merge(params, left_on='region_city', right_on='cluster_center', how='left')
     closest_cities["working_population"] = (
-        (closest_cities["population"] * 0.65).round(0).fillna(0).astype(int)
+        (closest_cities["population"] * WORKING_POPULATION_PERCENT).round(0).fillna(0).astype(int)
     )
     
     """Here should be the exact formula of this param calcs"""
@@ -119,7 +120,7 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
     response = {
         "estimates": json.loads(closest_cities.to_json()),
         "links": json.loads(routes.to_json()),
-        "plant_assessment_val": plant_assessment_val
+        "metric_float": plant_assessment_val
     }
     return response
         
