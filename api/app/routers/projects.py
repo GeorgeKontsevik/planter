@@ -71,18 +71,45 @@ async def list_projects(db: AsyncSession = Depends(get_db)):
 # Получение проекта по ID
 @router.get(
     "/{project_id}",
-    response_model=schemas.ProjectOut,
+    # response_model=schemas.ProjectOut,
     summary="Get project by ID",
     description="Retrieve project details along with associated specialists",
     )
 async def get_project(project_id: int,
                     db: AsyncSession = Depends(get_db)):
+    
+      
+    
+    specialist_crud_instance = crud.SpecialistCRUD(db)
+    # Fetch related entities
+    specialists = await specialist_crud_instance.get_specialists_by_project_id(project_id)
+
+    # Fetch project
     proj_crud_instance = crud.ProjectCRUD(db)
     project = await proj_crud_instance.get_project_by_id(project_id)
+    project.geometry = crud.serialize_geometry(project.geometry)
+    
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    project.geometry = crud.serialize_geometry(project.geometry)
-    return project
+
+    # Assemble the response
+    return {
+        "id": project.id,
+        "name": project.name,
+        "industry_name": project.industry_name,
+        "n_hours": project.n_hours,
+        "workforce_type": project.workforce_type,
+        "geometry": project.geometry,
+        "specialists": specialists,
+    }
+
+
+    # proj_crud_instance = crud.ProjectCRUD(db)
+    # project = await proj_crud_instance.get_project_by_id(project_id)
+    # if not project:
+    #     raise HTTPException(status_code=404, detail="Project not found")
+    # project.geometry = crud.serialize_geometry(project.geometry)
+    # return project
 
 
 
@@ -249,37 +276,6 @@ async def update_project(
     # Return updated project with warnings
     return {"id": updated_project.id, "name": updated_project.name}
 
-    # except Exception as e:
-    #     await db.rollback()
-    #     raise HTTPException(status_code=500, detail=f"Error updating project: {str(e)}")
-    # except Exception as e:
-    #     await db.rollback()
-    #     raise HTTPException(status_code=500, detail=f"Error updating project: {str(e)}")
-
-
-# @router.put(
-#     "/specialists/{project_id}",
-#     # response_model=schemas.ProjectOut,
-#     summary="Update project specialists",
-#     description="Assign specialists to a project and update their counts."
-# )
-# async def update_project_specialists(
-#     specialists_data: List[schemas.SpecialistCreate],
-#     project_id: int,
-#     db: AsyncSession = Depends(get_db),
-# ):
-#     proj_crud_instance = crud.ProjectCRUD(db)
-#     # project = await proj_crud_instance.get_project_by_id(project_id)
-
-#     # if not project:
-#     #     raise HTTPException(status_code=404, detail="Project not found")
-
-#     success = await proj_crud_instance.update_project_specialists(project_id, specialists_data)
-
-    
-#     return {"detail": "Project changed successfully"}
-
-
 @router.delete("/{project_id}", status_code=204)
 async def delete_project(project_id: int, db: AsyncSession = Depends(get_db)):
     proj_crud_instance = crud.ProjectCRUD(db)
@@ -326,5 +322,3 @@ async def get_project_everything(
         "specialists": specialists,
         "layers": layers,
     }
-
-

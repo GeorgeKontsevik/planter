@@ -9,6 +9,7 @@ from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
 from skmob.models.gravity import Gravity
 import skmob
+import json
 import numpy as np
 import random
 import shapely
@@ -16,6 +17,7 @@ import folium
 from shapely.geometry import LineString
 import pickle
 
+from fastapi import HTTPException
 # Initialize pandarallel
 # pandarallel.initialize(progress_bar=False)
 
@@ -253,18 +255,25 @@ def generate_flows(df, gravity):
     !!! нужно пересчитыват какждый раз при изменении параметров города
 
     """
-    assert all(
-        param in df.columns
-        for param in ["city_attractiveness_coeff", "region_city", "norm_outflow"]
-    )
-
-    fdf_fitted = gravity.generate(
-        df,
-        relevance_column="city_attractiveness_coeff",
-        tot_outflows_column="norm_outflow",
-        out_format="flows",
-        tile_id_column="region_city",
-    )
+    try:
+        assert all(
+            param in df.columns
+            for param in ["city_attractiveness_coeff", "region_city", "norm_outflow"]
+        )
+    except Exception as ex:
+        raise AssertionError
+    # df.to_pickle('api/app/df.pkl')
+    try:
+        
+        fdf_fitted = gravity.generate(
+            df,
+            relevance_column="city_attractiveness_coeff",
+            tot_outflows_column="norm_outflow",
+            out_format="flows",
+            tile_id_column="region_city",
+        )
+    except Exception as e:
+        print('\n\n\n\n',e)
 
     return pd.DataFrame(fdf_fitted).sort_values(by=["flow", "destination"])
 
@@ -632,8 +641,19 @@ class WorkForceFlows:
         for stage in range(stage_number, max(self.pipeline_stages.keys()) + 1):
             self.pipeline_stages[stage] = False
 
-    def run_cities_pipeline_stage_1(self):
-        if not self.pipeline_stages[1]:
+    def run_cities_pipeline_stage_1(self, force=False):
+        if not force:
+            if not self.pipeline_stages[1]:
+                if hasattr(self, "cities"):
+                    self.cities = drop_cities_no_population(self.cities)
+                    self.cities["norm_outflow"] = normalize_outflow_by_pop_mil(self.cities)
+                    self.pipeline_stages[1] = True
+                    self.mark_stage_dirty(2)  # Mark later stages as needing rerun
+                else:
+                    warnings.warn("Please provide 'cities' data")
+            else:
+                print("Skipping: Stage 1 has already been run")
+        else:
             if hasattr(self, "cities"):
                 self.cities = drop_cities_no_population(self.cities)
                 self.cities["norm_outflow"] = normalize_outflow_by_pop_mil(self.cities)
@@ -641,8 +661,6 @@ class WorkForceFlows:
                 self.mark_stage_dirty(2)  # Mark later stages as needing rerun
             else:
                 warnings.warn("Please provide 'cities' data")
-        else:
-            print("Skipping: Stage 1 has already been run")
 
     def run_cities_pipeline_stage_2(self):
         if not self.pipeline_stages[2]:
@@ -715,7 +733,7 @@ class WorkForceFlows:
     def run_cities_pipeline_stage_6(self):
         if not self.pipeline_stages[6]:
             if hasattr(self, "fdf") and hasattr(self, "init_cities"):
-                fit_flow_df(self.fdf, self.model)  # Fit the model with flow data
+                # fit_flow_df(self.fdf, self.model)  # Fit the model with flow data
                 self.fdf_fitted_df = generate_flows(self.cities, self.model)
                 self.pipeline_stages[6] = True
                 self.mark_stage_dirty(7)  # Stage 7 depends on Stage 6
@@ -787,6 +805,7 @@ class WorkForceFlows:
 
     # -----------------------------------------------------------------
     def run_cities_pipeline_stage_4_upd(self):
+        self.run_cities_pipeline_stage_1(force=True)
         if not self.pipeline_stages[4]:
             if hasattr(self, "cities") and hasattr(self, "scaler"):
                 if self.update_city_name:
@@ -807,7 +826,9 @@ class WorkForceFlows:
                         .to_frame()
                         .T
                     ).item()
-
+                    print('\n\nAttr:', self.cities.loc[
+                        self.update_city_name_idx, "city_attractiveness_coeff"
+                    ])
                     self.pipeline_stages[4] = True
                     self.mark_stage_dirty(5)  # Stage 5 depends on Stage 4
             else:
@@ -837,10 +858,10 @@ class WorkForceFlows:
             if hasattr(self, "fdf") and hasattr(self, "init_cities"):
 
                 # fit_flow_df(self.fdf, self.model)  # Fit the model with flow data
-                try:
-                    self.fdf_fitted_df = generate_flows(self.cities, self.model)
-                except Exception as ex:
-                    print(ex)
+                
+                self.fdf_fitted_df = generate_flows(self.cities, self.model)
+                # except Exception as ex:
+                    # print('\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n',ex)
 
                 self.pipeline_stages[6] = True
                 self.mark_stage_dirty(7)  # Stage 7 depends on Stage 6
@@ -923,6 +944,7 @@ class WorkForceFlows:
 
         self.update_city_name = city_name
         self.updated_city_params = new_params
+        
 
         if city_name in self.cities["region_city"].values:
             # Update the DataFrame for the specific city
@@ -931,7 +953,7 @@ class WorkForceFlows:
             ].index.item()
 
             self.cities.loc[self.update_city_name_idx, new_params.keys()] = (
-                new_params.values()
+                [float(p) for p in new_params.values()]
             )
             print(f"Updated parameters for {city_name}")
             # Mark relevant stages as dirty
@@ -978,3 +1000,129 @@ class WorkForceFlows:
             instance = pickle.load(f)
         print(f"Class instance loaded from {filename}")
         return instance
+
+#------------------------------------------------------------------
+"""
+TODO: REFACTOR
+"""
+
+import __main__
+__main__.WorkForceFlows = WorkForceFlows
+
+DEGREE_CRS = 4326
+METRIC_CRS = 3857
+
+import os
+import pickle
+import geopandas as gpd
+import json
+
+# Load or initialize WorkForceFlows
+filename = "wff_0712.pkl"
+directory = "api/app/data"
+
+
+# Check if the file exists in the specified directory
+
+if filename in os.listdir(directory):
+    
+    filepath = os.path.join(directory, 'scaler_wff.pkl')
+    with open(filepath, "rb") as f:
+        scaler_x = pickle.load(f)
+
+    filepath = os.path.join(directory, 'gravity_wff.pkl')
+    with open(filepath, "rb") as f:
+        model_gravity = pickle.load(f)
+
+    filepath = os.path.join(directory, 'cities.parquet')
+    cities = gpd.read_parquet(filepath)
+
+    filepath = os.path.join(directory, 'fdf_fitted.parquet')
+    # fdf_fitted = gpd.read_parquet(filepath)
+
+    
+    filepath = os.path.join(directory, filename)
+    wff = WorkForceFlows.from_pickle(filepath)
+    
+    wff['scaler'] = scaler_x
+    wff['model'] = model_gravity
+    # wff['fdf_fitted_df'] = fdf_fitted
+    
+else:
+    raise FileNotFoundError(f"The file {filename} was not found in the directory {directory}.")
+
+
+
+def do_reflow(city_name, updated_params:dict=None):
+    wff['cities'] = cities
+# %%
+    try:
+        """
+        FIX THAT AREA THING
+        """
+        area = wff.initial_cities_state.loc[wff.initial_cities_state['region_city']==city_name, 'geometry'].to_frame().to_crs(METRIC_CRS).buffer(200*1e3).to_crs(DEGREE_CRS).to_frame()
+
+        # Update parameters and recalculate if needed
+        if updated_params:
+            city_mask = wff.cities["region_city"] == city_name
+            print('\n\n\n\n', updated_params, wff.current_cities_state.loc[city_mask,:].to_dict())
+
+            wff.update_city_params(city_name, updated_params)
+            wff.recalculate_after_update()
+            print('\n\n\n\n', wff.current_cities_state.loc[city_mask,:].to_dict())
+
+            city_mask = wff.cities["region_city"] == city_name
+            new_city_val = wff.cities.loc[city_mask,["flows_in", "flows_out"]].values.tolist()
+
+            # Generate differences
+            diff = wff.compare_city_states()
+            diff_links = wff.compare_link_states()
+            
+            # [gdf.geometry.within(area_polygon)]
+
+            mask_links = diff_links["big_flows"] > 0
+            links_diff = wff.gdf_links[wff.gdf_links["destination"].isin(diff_links[mask_links]["destination"])]
+
+            # Apply masks and save GeoJSONs
+            # mask = diff["in_out_diff"] > 0
+            mask2 = diff['region_city'].isin(links_diff['destination'])
+            cities_diff = diff[mask2].dropna()
+            links_diff = links_diff[(links_diff['origin'].isin(cities_diff['region_city'])) \
+                                    & (links_diff['destination'].isin([city_name]))]
+            # print('\n\n\n\n', type(cities_diff.geometry.item()), type(area),\
+            #        cities_diff[cities_diff.interse])
+
+            print({"cities_diff": json.loads(cities_diff.to_json()),
+                "links_diff": json.loads(links_diff.to_json()),
+                "updated_params": updated_params,
+                "updated_in_out_flow_vals": new_city_val,
+                'plant': 1})
+
+            return {
+                "cities_diff": json.loads(cities_diff.to_json()),
+                "links_diff": json.loads(links_diff.to_json()),
+                "updated_params": updated_params,
+                "updated_in_out_flow_vals": new_city_val,
+                'plant': 1
+            }
+
+        # Return original flows without updates
+        else:
+            # print(area)
+            
+
+            original_flows_mask = wff.gdf_links['destination'].isin([city_name])
+
+            original_flows = wff.gdf_links[original_flows_mask]
+
+            original_cities = wff.cities.to_crs(DEGREE_CRS).loc[wff.cities['region_city'].isin(original_flows['origin'])]
+
+            
+
+            # print(original_cities)
+            return {"cities_diff": json.loads(original_cities.to_json()),
+                    'links_diff': json.loads(original_flows.to_json())}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)+'___workflow')
+    

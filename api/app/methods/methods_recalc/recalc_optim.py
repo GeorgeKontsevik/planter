@@ -1,7 +1,7 @@
 import optuna
 import numpy as np
 import pandas as pd
-from api.app.utils.data_reader import model, cities
+
 from api.app.utils.constants import CITY_MODEL_PARAMS
 from api.app.methods.methods_recalc._model_preprocesser import preprocess_x
 from functools import partial
@@ -23,6 +23,8 @@ def objective(
     ueqi_social_and_leisure_infrastructure_current,
     ueqi_citywide_space_current,
     median_salary_current,
+    factories_total,
+    model
 ):
     # Sample parameters using Optuna's suggested distributions
     # population = trial.suggest_float("population", min_pop, max_pop)
@@ -63,6 +65,7 @@ def objective(
         ueqi_social_and_leisure_infrastructure,
         ueqi_citywide_space,
         median_salary,
+        factories_total
     ]
 
     # Predict migration using the model
@@ -73,8 +76,8 @@ def objective(
     # return abs(target_migration - np.exp(predicted_migration))
 
 
-def do_optim_recalc(selected_city_params):
-    x = preprocess_x(selected_city_params, fit=False)[0]
+def do_optim_recalc(selected_city_params, scaler_x, model):
+    x = preprocess_x(selected_city_params, scaler_x, fit=False)[0]
 
     # Use functools.partial to bind extra arguments to the objective function
     objective_with_params = partial(
@@ -109,13 +112,13 @@ def do_optim_recalc(selected_city_params):
     predicted_city_params = predicted_city_params.round(0).astype(int)
 
     predicted_migration = np.exp(
-        model.predict(preprocess_x(predicted_city_params, fit=False))
+        model.predict(preprocess_x(predicted_city_params, scaler_x, fit=False))
     )
     predicted_city_params["num_in_migration"] = predicted_migration
     return predicted_city_params
 
 
-if __name__ == "__main__":
-    inp = cities.iloc[0, :].to_frame().T[CITY_MODEL_PARAMS]
-    output = do_optim_recalc(inp)
-    print(output)
+# if __name__ == "__main__":
+#     inp = cities.iloc[0, :].to_frame().T[CITY_MODEL_PARAMS]
+#     output = do_optim_recalc(inp, scaler_x)
+#     print(output)

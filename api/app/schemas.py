@@ -7,112 +7,106 @@ from datetime import datetime
 
 
 
-class LayerBase(BaseModel):
+# class LayerBase(BaseModel):
+#     name: str
+#     geometry: Dict  # GeoJSON-like structure
+#     properties: Optional[Dict] = None
+#     style: Optional[Dict] = None
+
+
+
+# class Style(BaseModel):
+#     fill_opacity: float = Field(..., alias="fillopacity")
+#     line_width: Optional[float] = Field(None, alias="LineWidth")
+#     color: str
+
+class Layer(BaseModel):
     name: str
-    geometry: Dict  # GeoJSON-like structure
-    properties: Optional[Dict] = None
+    project_id:int
+    geometry: Any
+    fill_opacity: Optional[float]
+    line_width: Optional[float]
+    color: Optional[str]
+
+# class CreateProjectPayload(BaseModel):
+#     project_id: int
+#     name: str
+#     layers: List[Layer]
 
 
-class LayerCreate(LayerBase):
-    project_id: int
+# class LayerUpdate(BaseModel):
+#     name: Optional[str]
+#     geometry: Optional[Dict]
+#     properties: Optional[Dict]
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "name": "Building Footprint",
-                "geometry": {
-                    "type": "Polygon",
-                    "coordinates": [
-                        [
-                            [45.128569, 38.902091],
-                            [45.129569, 38.903091],
-                            [45.130569, 38.901091],
-                            [45.128569, 38.902091]
-                        ]
-                    ]
-                },
-                "properties": {
-                    "color": "blue",
-                    "material": "concrete"
-                },
-                "project_id": 1
-            }
-        }
-
-
-class LayerUpdate(BaseModel):
-    name: Optional[str]
-    geometry: Optional[Dict]
-    properties: Optional[Dict]
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "name": "Updated Layer Name",
-                "geometry": {
-                    "type": "Polygon",
-                    "coordinates": [
-                        [
-                            [45.128569, 38.902091],
-                            [45.129569, 38.903091],
-                            [45.130569, 38.901091],
-                            [45.128569, 38.902091]
-                        ]
-                    ]
-                },
-                "properties": {
-                    "color": "red",
-                    "material": "steel"
-                }
-            }
-        }
+#     class Config:
+#         schema_extra = {
+#             "example": {
+#                 "name": "Updated Layer Name",
+#                 "geometry": {
+#                     "type": "Polygon",
+#                     "coordinates": [
+#                         [
+#                             [45.128569, 38.902091],
+#                             [45.129569, 38.903091],
+#                             [45.130569, 38.901091],
+#                             [45.128569, 38.902091]
+#                         ]
+#                     ]
+#                 },
+#                 "properties": {
+#                     "color": "red",
+#                     "material": "steel"
+#                 }
+#             }
+#         }
 
 
-class Layer(LayerBase):
-    id: int
-    project_id: int
+# class Layer(LayerBase):
+#     id: int
+#     project_id: int
 
-    class Config:
-        orm_mode = True
-        schema_extra = {
-            "example": {
-                "id": 10,
-                "name": "Layer Example",
-                "geometry": {
-                    "type": "Polygon",
-                    "coordinates": [
-                        [
-                            [45.128569, 38.902091],
-                            [45.129569, 38.903091],
-                            [45.130569, 38.901091],
-                            [45.128569, 38.902091]
-                        ]
-                    ]
-                },
-                "properties": {
-                    "key": "value"
-                },
-                "project_id": 1
-            }
-        }
+#     class Config:
+#         orm_mode = True
+#         schema_extra = {
+#             "example": {
+#                 "id": 10,
+#                 "name": "Layer Example",
+#                 "geometry": {
+#                     "type": "Polygon",
+#                     "coordinates": [
+#                         [
+#                             [45.128569, 38.902091],
+#                             [45.129569, 38.903091],
+#                             [45.130569, 38.901091],
+#                             [45.128569, 38.902091]
+#                         ]
+#                     ]
+#                 },
+#                 "properties": {
+#                     "key": "value"
+#                 },
+#                 "project_id": 1
+#             }
+#         }
 
 
-class LayerResponse(BaseModel):
-    id: int
-    name: str
-    project_id: int
+# class LayerResponse(BaseModel):
+#     id: int
+#     name: str
+#     project_id: int
 
-    class Config:
-        orm_mode = True
+#     class Config:
+#         orm_mode = True
 
-class LayerOut(BaseModel):
-    id: int
-    name: str
-    geometry: Dict[str, Any]  # GeoJSON format
-    properties: Optional[Dict[str, Any]]
+# class LayerOut(BaseModel):
+#     id: int
+#     name: str
+#     geometry: Dict[str, Any]  # GeoJSON format
+#     properties: Optional[Dict[str, Any]]
 
-    class Config:
-        orm_mode = True
+#     class Config:
+#         orm_mode = True
 # -------------
 
 class ProjectBase(BaseModel):
@@ -150,7 +144,7 @@ class ProjectCreate(BaseModel):
     name: str
     industry_name: str
     company_location: Dict[str, float]
-    n_hours: float = Field(..., lt=3)
+    n_hours: float = Field(...)
     specialists: List[SpecialistCreate]
     workforce_type: WorkforceTypeEnum
 
@@ -205,7 +199,7 @@ class ProjectEverything(BaseModel):
     industry_name: Optional[str]
     n_hours: int
     specialists: List[SpecialistOut]
-    layers: List[LayerOut]
+    layers: List
 
     class Config:
         orm_mode = True
@@ -246,7 +240,7 @@ class ClosestCitiesQueryParamsRequest(BaseModel):
         ...,
         example={"lng": 45.128569, "lon": 38.902091},
     )
-    n_hours: float = Field(..., example=1.5, lt=3)
+    n_hours: float = Field(..., example=1.5)
 
 
 class UpdateParams(BaseModel):

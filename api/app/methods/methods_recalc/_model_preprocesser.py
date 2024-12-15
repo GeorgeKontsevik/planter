@@ -24,7 +24,7 @@ def preprocess_x(df, scaler_x, fit=False):
     x = df[MASK_X].copy()
 
     # Step 1: Initialize the MinMaxScaler
-
+    
     x_scaled = scaler_x.fit_transform(x) if fit else scaler_x.transform(x)
 
     return x_scaled

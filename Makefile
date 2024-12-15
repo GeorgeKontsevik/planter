@@ -1,4 +1,5 @@
 # Makefile
+SHELL := /bin/bash
 
 # Default environment variables
 HOST = 0.0.0.0
@@ -6,6 +7,12 @@ PORT = 8000
 APP = api.app.main:app
 WORKERS = 1
 RELOAD = --reload
+
+# env:
+# 	. /opt/homebrew/anaconda3/bin/activate && conda activate /opt/homebrew/anaconda3/envs/for_mob;
+
+grok:
+	ngrok http 8000
 
 # Run FastAPI in development mode
 run:

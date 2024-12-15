@@ -13,8 +13,18 @@ router = APIRouter(
 
 ontology = pd.read_pickle('api/app/data/new_ontology.pkl')
 
-@router.post("/", summary="Get indo about specilists' educational groups", status_code=status.HTTP_200_OK)
-async def get_edu_groups(industry: IndustryEnum, specialities_list: List[SpecialtyEnum]):
-    mask = (ontology['industry_code'] == industry) & (ontology['speciality'].isin(specialities_list))
-    res = ontology.loc[mask, ['speciality', 'edu_group_code', 'edu_group', 'prof_domain']]
-    return json.loads(res.to_json())
+@router.get("/", summary="Get indo about specilists' educational groups", status_code=status.HTTP_200_OK)
+async def get_edu_groups():
+    # mask = (ontology['speciality'].isin(specialities_list))
+    res = ontology.loc[:, ['speciality', 'edu_group_code', 'edu_group', 'prof_domain']]
+
+    grouped_extended_df = res.groupby(['speciality', 'edu_group_code']).agg({
+        'edu_group': lambda x: list(x.dropna().unique()),
+        'prof_domain': lambda x: list(x.dropna().unique())
+    }).reset_index()
+
+    # Convert to JSON
+    final_extended_data = grouped_extended_df.to_dict(orient='records')
+    json_extended_output = json.loads(json.dumps(final_extended_data, ensure_ascii=False, indent=2))
+
+    return json_extended_output

@@ -32,7 +32,7 @@ MASK_X = [
     "ueqi_social_and_leisure_infrastructure",
     "ueqi_citywide_space",
     "median_salary",
-    # "vacancies_total",
+    "factories_total",
 ]
 
 MASK_Y = "num_in_migration"

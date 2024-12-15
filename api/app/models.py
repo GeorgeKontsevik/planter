@@ -1,6 +1,6 @@
 # app/models.py
 
-from sqlalchemy import Column, Integer, String, JSON, ForeignKey, DateTime, Float, Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Float, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from geoalchemy2 import Geometry
@@ -68,8 +68,11 @@ class Layer(Base):
     id = Column(Integer, primary_key=True, index=True)
     project_id = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     name = Column(String, nullable=False)
+    fill_opacity = Column(Float, nullable=True)
+    line_width = Column(Float, nullable=True)
+    color = Column(String, nullable=True)
     geometry = Column(Geometry(geometry_type='GEOMETRY', srid=4326), nullable=False)
-    properties = Column(JSON, nullable=True)  # Дополнительные свойства слоя
+    # properties = Column(JSON, nullable=True)  # Дополнительные свойства слоя
 
     # Временные метки
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

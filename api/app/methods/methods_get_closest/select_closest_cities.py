@@ -45,7 +45,7 @@ def find_n_closest_cities(
         "city_category",
         "population",
         "harsh_climate",
-        "ueqi_score",
+        # "ueqi_score",
         "ueqi_residential",
         "ueqi_street_networks",
         "ueqi_green_spaces",

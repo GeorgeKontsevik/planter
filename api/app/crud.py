@@ -2,13 +2,13 @@
 
 from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from api.app import models
+from api.app import models, schemas
 from geoalchemy2.shape import to_shape
-from shapely.geometry import shape
+from shapely.geometry import shape 
 from sqlalchemy.orm import joinedload
 from sqlalchemy.dialects.postgresql import insert
 from geoalchemy2 import WKTElement
-from geoalchemy2.shape import to_shape
+from geoalchemy2.shape import to_shape, from_shape
 from shapely.geometry import mapping
 from sqlalchemy import update
 from fastapi import HTTPException
@@ -172,30 +172,32 @@ class LayerCRUD:
             }
             for layer in layers
         ]
+    
+    async def create_project_with_layers(self, layers_data: dict):
 
-    async def create_layer(self, layer_data: dict):
-        
-        # Convert GeoJSON geometry to WKT
-        geojson_geometry = layer_data["geometry"]
-        shapely_geometry = shape(geojson_geometry)
-        wkt_geometry = WKTElement(shapely_geometry.wkt, srid=4326)
+            layers = []
+            for layer_data in layers_data["layers"]:
+                if layer_data["data"]["type"] == "FeatureCollection":
+                    for feature in layer_data["data"]["features"]:
+                        geom = shape(feature["geometry"])
+                        wkt_geometry = from_shape(geom, srid=4326)
+                        
+                        layer = models.Layer(
+                            name=layer_data["name"],
+                            geometry=wkt_geometry,
+                            project_id=layers_data["project_id"],
+                            fill_opacity=layer_data["style"]["fillOpacity"],
+                            line_width=layer_data["style"].get("LineWidth"),
+                            color=layer_data["style"]["color"]
+                        )
+                        layers.append(layer)
 
-        # Replace the GeoJSON geometry with WKT
-        layer_data["geometry"] = wkt_geometry
+            self.db.add_all(layers)
+            await self.db.commit()
+            # await self.db.refresh(project)
 
-        # Create a new layer
-        new_layer = models.Layer(**layer_data)
-        
-        self.db.add(new_layer)
-        await self.db.commit()
-        await self.db.refresh(new_layer)
-
-        return {
-            "id": new_layer.id,
-            "name": new_layer.name,
-            "project_id": new_layer.project_id
+            return {"layers": [{"id": layer.id, "name": layer.name} for layer in layers]
             }
-
 
     
     # async def update_layer(self, layer_id: int, updated_data: dict):

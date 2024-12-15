@@ -1,24 +1,32 @@
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from typing import Dict
 from functools import partial
 import logging
 import optuna
-from sqlalchemy.orm import Session
+import pandas as pd
 import geopandas as gpd
 from catboost import CatBoostRegressor
 import os
 import pickle
 
 from .. import schemas
-from ..database import get_db
-from ..dependencies import get_current_user  # Implement authentication as needed
 from ..methods.methods_recalc._model_preprocesser import preprocess_x
 from ..methods.methods_recalc.recalc_optim import objective
+from api.app.methods.workflows import do_reflow
 
 router = APIRouter(
-    prefix="/cities",
+    prefix="/flows",
     tags=["City"],
 )
+
+
+# Capture the optimization results
+class OptimizeResult:
+    initial_migration: float = 0
+    best_value: float = 0
+    best_params: Dict[str, float] = {}
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -28,7 +36,7 @@ directory = "api/app/data"
 filepath = os.path.join(directory, 'cities.parquet')
 cities = gpd.read_parquet(filepath)
 
-filepath = os.path.join(directory, 'scaler_x.pkl')
+filepath = os.path.join(directory, 'scaler_x_optim.pkl')
 with open(filepath, "rb") as f:
     scaler_x = pickle.load(f)
 
@@ -36,14 +44,8 @@ cbm_path = os.path.join(directory, "city_migr_pred_1711_base.cbm")
 model = CatBoostRegressor()
 model.load_model(cbm_path)
 
-
-
-@router.post("/optimize", response_model=schemas.OptimizeResponse, status_code=201)
-async def optimize_city(
-    request: schemas.OptimizeRequest,
-    background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
-):
+@router.get("/optimize",status_code=200)
+async def optimize_city(name):
     cols = [
     "population",
     "harsh_climate",
@@ -63,9 +65,6 @@ async def optimize_city(
     """
 
     try:
-        name = request.name
-        new_params = request.new_params.dict(exclude_unset=True)
-
         # Fetch the city from the dataset
         selected_city = cities.loc[cities["region_city"] == name, cols]
         if selected_city.empty:
@@ -91,24 +90,16 @@ async def optimize_city(
             model=model,
         )
 
-        # Capture the optimization results
-        class OptimizeResult:
-            initial_migration: float = 0
-            best_value: float = 0
-            best_params: Dict[str, float] = {}
-
-        result = OptimizeResult()
-
-        def run_study():
+        def run_study(result):
             try:
                 study = optuna.create_study(direction="maximize")
                 study.optimize(
-                    objective_with_params, n_trials=50, n_jobs=1, show_progress_bar=True
+                    objective_with_params, n_trials=50, n_jobs=5, show_progress_bar=False
                 )
-                result.initial_migration = round(
-                    cities.loc[cities["region_city"] == name, "num_in_migration"].item(),
-                    2,
-                )
+                # result.initial_migration = round(
+                #     cities.loc[cities["region_city"] == name, "num_in_migration"].item(),
+                #     2,
+                # )
                 result.best_value = study.best_value
                 result.best_params = {
                     k: round(v, 3) for k, v in study.best_params.items()
@@ -116,15 +107,38 @@ async def optimize_city(
                 logger.info(f"Optimization completed for {name}")
             except Exception as e:
                 logger.error(f"Error during optimization: {e}")
+                raise e
+            
+            return result
 
         # Run the optimization as a background task
-        background_tasks.add_task(run_study)
+        result = OptimizeResult()
+        result = run_study(result)
+        # background_tasks.add_task(run_study)
+        
+        
 
-        return schemas.OptimizeResponse(
-            initial_migration=result.initial_migration,
-            optimized_migration=result.best_value,
-            optimal_parameters=result.best_params,
-        )
+        try:
+            
+            # print(scaler_x)
+            res = pd.DataFrame([result.best_params])
+            res.loc[:,'population'] = x[0]
+            res.loc[:,'harsh_climate'] = x[1]
+            res.loc[:,"factories_total"]=x[9]
+            
+            print(res.loc[:,scaler_x.feature_names_in_])
+            print(scaler_x.feature_names_in_, res.columns)
+
+            res.loc[:,scaler_x.feature_names_in_] = scaler_x.inverse_transform(res.loc[:,scaler_x.feature_names_in_])
+
+            res = res.iloc[0].to_dict()
+            print(res)
+
+            return do_reflow(name, updated_params=res)
+        except Exception as ex:
+            logger.error(ex)
+            raise ex
+
     except HTTPException as e:
         logger.error(f"HTTPException: {e.detail}")
         raise e
