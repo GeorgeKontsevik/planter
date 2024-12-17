@@ -168,7 +168,7 @@ class LayerCRUD:
                 "name": layer.name,
                 "project_id": layer.project_id,
                 "geometry": serialize_geometry(layer.geometry),
-                # "properties": layer.properties,
+                "style": layer.style,
             }
             for layer in layers
         ]
@@ -186,9 +186,7 @@ class LayerCRUD:
                             name=layer_data["name"],
                             geometry=wkt_geometry,
                             project_id=layers_data["project_id"],
-                            fill_opacity=layer_data["style"]["fillOpacity"],
-                            line_width=layer_data["style"].get("LineWidth"),
-                            color=layer_data["style"]["color"]
+                            style=layer_data.get("style", {})  # Handling dynamic properties
                         )
                         layers.append(layer)
 

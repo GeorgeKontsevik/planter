@@ -92,7 +92,7 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
             params, plant_assessment_val = do_estimate(
                 uinput_spec_num=query_params.specialists,
                 uinput_industry=query_params.industry_name,
-                closest_cities=closest_cities)
+                closest_cities=closest_cities, workforce_type=workforce_type)
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Analysis failed: ESTIMATOR {e}")
@@ -143,15 +143,17 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
             except Exception:
                 pass
         
-        def calculate_average_prov(data):
+        def calculate_average_prov(plant_assessment_val, workforce_type):
             prov_values = []
             
             # Access the "plant" level
 
-            for specialty in data.values():
+            for specialty in plant_assessment_val.values():
                 prov_values2 = []
                 for key, value in specialty.items():
                     if key.startswith("prov_"):
+                        if workforce_type !='all' and workforce_type not in key:
+                            continue
                         
                         prov_values2.append(value)
                 value = sum(prov_values2)
@@ -169,13 +171,13 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
         
         """Here should be the exact formula of this param calcs"""
         
-        print('\n\n\n\n\nplant_assessment_val', calculate_average_prov(plant_assessment_val), plant_assessment_val)
+        print('\n\n\n\n\nplant_assessment_val', calculate_average_prov(plant_assessment_val, workforce_type), plant_assessment_val)
 
         response = {
             "estimates": json.loads(closest_cities.to_json()),
             "links": json.loads(routes.to_json()),
             "plant": plant_assessment_val,
-            "plant_total":calculate_average_prov(plant_assessment_val)
+            "plant_total":calculate_average_prov(plant_assessment_val, workforce_type)
         }
         return response
     except Exception as e:

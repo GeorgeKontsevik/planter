@@ -55,6 +55,7 @@ def find_n_closest_cities(
         "factories_total",
         "estimate",
         "h3_index",
+        "median_salary",
         # "duration",
         "geometry",
     ]

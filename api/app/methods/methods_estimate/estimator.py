@@ -23,7 +23,7 @@ from math import ceil
 
 
 def do_estimate(
-    uinput_spec_num: List[dict], uinput_industry: str, closest_cities) -> pd.DataFrame:
+    uinput_spec_num: List[dict], uinput_industry: str, closest_cities, workforce_type=None) -> pd.DataFrame:
     """
     Perform competitor analysis and enrich the grouped_grads DataFrame with competitor-related metrics.
 
@@ -349,8 +349,13 @@ def do_estimate(
         if plant_assessment_val[spec]['prov_specialists']>1:
             plant_assessment_val[spec]['prov_specialists'] = 1
 
-        plant_assessment_val[spec]['all'] = ceil(plant_assessment_val[spec]['total_specialists'] + plant_assessment_val[spec]['total_graduates'])
-
+        if workforce_type:
+            if workforce_type=='all':
+                plant_assessment_val[spec]['all'] = ceil(plant_assessment_val[spec]['total_specialists'] + plant_assessment_val[spec]['total_graduates'])
+            elif workforce_type=='graduates':
+                plant_assessment_val[spec]['all'] = ceil(plant_assessment_val[spec]['total_graduates'])
+            elif workforce_type=='specialists':
+                plant_assessment_val[spec]['all'] = ceil(plant_assessment_val[spec]['total_specialists'])
 
     for col in result.columns:
         try:

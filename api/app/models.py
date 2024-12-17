@@ -1,6 +1,6 @@
 # app/models.py
 
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Float, Boolean
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Float, Boolean, JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from geoalchemy2 import Geometry
@@ -72,7 +72,7 @@ class Layer(Base):
     line_width = Column(Float, nullable=True)
     color = Column(String, nullable=True)
     geometry = Column(Geometry(geometry_type='GEOMETRY', srid=4326), nullable=False)
-    # properties = Column(JSON, nullable=True)  # Дополнительные свойства слоя
+    style = Column(JSON, nullable=True)  # Дополнительные свойства слоя
 
     # Временные метки
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
