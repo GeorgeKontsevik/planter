@@ -21,7 +21,7 @@ def _make_pyrosm_api_call(
     url = f"http://router.project-osrm.org/route/v1/driving/{start_coords[0]},{start_coords[1]};{end_coords[0]},{end_coords[1]}?overview=full"
 
     # Send the GET request to the OSRM API
-    response = requests.get(url, timeout=5)
+    response = requests.get(url, timeout=15)
 
     assert response.ok, "Bad PYROSM api request, probably coords could be the cause"
 
@@ -50,7 +50,7 @@ def _get_route_duration(route_data: dict) -> float:
 
 
 def get_route(
-    start_coords: Tuple[float, float], end_coords: Tuple[float, float]
+    start_coords: Tuple[float, float], end_coords: Tuple[float, float], city_name
 ) -> Dict[str, float | LineString | None]:
     """
     Чтобы подружить эту всю историю с Transport frames (TF), нужно просто заменить этот метод.
@@ -72,7 +72,8 @@ def get_route(
     geom = _get_route_line_geom(route_data)
 
     return {
-        "distance": _get_route_distance(route_data),
+        # "distance": _get_route_distance(route_data),
+        "origin": city_name,
         "duration": _get_route_duration(route_data),
         "geometry": _preprocess_geom(geom),  # List of (lat, lng) tuples
     }

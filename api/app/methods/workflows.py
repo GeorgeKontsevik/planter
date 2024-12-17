@@ -16,6 +16,7 @@ import shapely
 import folium
 from shapely.geometry import LineString
 import pickle
+from api.app.methods.methods_estimate.estimator import do_estimate
 
 from fastapi import HTTPException
 # Initialize pandarallel
@@ -1117,12 +1118,16 @@ def do_reflow(city_name, updated_params:dict=None):
 
             original_cities = wff.cities.to_crs(DEGREE_CRS).loc[wff.cities['region_city'].isin(original_flows['origin'])]
 
-            
+            # params, plant_assessment_val = do_estimate(
+            #     uinput_spec_num=specialists,
+            #     uinput_industry=industry_name,
+            #     closest_cities=original_cities)
 
             # print(original_cities)
             return {"cities_diff": json.loads(original_cities.to_json()),
-                    'links_diff': json.loads(original_flows.to_json())}
-        
+                    'links_diff': json.loads(original_flows.to_json()),
+                    'plant': 1}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)+'___workflow')
     

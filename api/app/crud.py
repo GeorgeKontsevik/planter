@@ -168,7 +168,7 @@ class LayerCRUD:
                 "name": layer.name,
                 "project_id": layer.project_id,
                 "geometry": serialize_geometry(layer.geometry),
-                "properties": layer.properties,
+                # "properties": layer.properties,
             }
             for layer in layers
         ]
