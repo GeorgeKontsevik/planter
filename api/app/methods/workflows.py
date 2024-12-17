@@ -1054,7 +1054,7 @@ else:
 
 
 
-def do_reflow(city_name, updated_params:dict=None):
+def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None):
     wff['cities'] = cities
 # %%
     try:
@@ -1066,13 +1066,30 @@ def do_reflow(city_name, updated_params:dict=None):
         # Update parameters and recalculate if needed
         if updated_params:
             city_mask = wff.cities["region_city"] == city_name
+
+            # original_flows_mask = wff.gdf_links['destination'].isin([city_name])
+
+            original_flows_mask = wff.gdf_links['destination'].isin([city_name])
+
+            original_flows = wff.gdf_links[original_flows_mask]
+
+            original_cities = wff.cities.to_crs(DEGREE_CRS).loc[wff.cities['region_city'].isin(original_flows['origin'])]  
+
+
+            # original_cities = wff.cities.loc[city_mask,:]
+            
+
+            # original_flows = wff.gdf_links[original_flows_mask]
+
+            # original_cities = wff.cities.to_crs(DEGREE_CRS).loc[wff.cities['region_city'].isin(original_flows['origin'])] 
             # print('\n\n\n\n', updated_params, wff.current_cities_state.loc[city_mask,:].to_dict())
 
             wff.update_city_params(city_name, updated_params)
             wff.recalculate_after_update()
             # print('\n\n\n\n', wff.current_cities_state.loc[city_mask,:].to_dict())
 
-            city_mask = wff.cities["region_city"] == city_name
+            print('\n\n\n\n\n\n\n\n', wff.cities)
+
             new_city_val = wff.cities.loc[city_mask,["flows_in", "flows_out"]].values.tolist()
 
             # Generate differences
@@ -1102,7 +1119,7 @@ def do_reflow(city_name, updated_params:dict=None):
                     print(ex)
                     # pass
             
-            print('\n\n\n\n\n\n', cities_diff)
+            # print('\n\n\n\n\n\n', cities_diff.merge(original_cities[['region_city', 'in_out_diff']], on='region_city', how='left'))
             # print({"cities_diff": json.loads(cities_diff.to_json()),
             #     "links_diff": json.loads(links_diff.to_json()),
             #     "updated_params": updated_params,
@@ -1114,19 +1131,63 @@ def do_reflow(city_name, updated_params:dict=None):
                     k = int(k)
 
             for k,v in updated_params.items():
-                print(v)
+                # print(v)
                 v = int(round(v))
-                print(v)
+                # print(v)
                 updated_params[k] = v
+
+            try:
+                del updated_params['population']
+            except Exception:
+                pass
             
-            print(updated_params, new_city_val)
+            # print(updated_params, new_city_val)
+            # print('\n\n\n\nGO\n\n\n\n',original_cities.merge(cities_diff[['region_city', 'in_out_diff']], on='region_city', how='right'))
+            try:
+                original_cities, plant_assessment_val = do_estimate(
+                    uinput_spec_num=specs,
+                    uinput_industry=industry,
+                    closest_cities=original_cities.merge(cities_diff[['region_city', 'in_out_diff']], on='region_city', how='right'))
+            except Exception as ex:
+                print(ex)
+                raise ex
+            print(plant_assessment_val, cities_diff)
+
+            def calculate_average_prov(data):
+                prov_values = []
+                
+                # Access the "plant" level
+
+                for specialty in data.values():
+                    prov_values2 = []
+                    for key, value in specialty.items():
+                        if key.startswith("prov_"):
+
+                            prov_values2.append(value)
+                    value = sum(prov_values2)
+                    value = 1 if value>1 else value        
+                    prov_values.append(value)
+                
+                # Calculate the average
+                if prov_values:
+                    avg_prov = sum(prov_values) / len(prov_values)
+                    avg_prov = 1 if avg_prov>1 else avg_prov
+                    return avg_prov
+                else:
+                    return None  # Return None or some indication if no prov values were found
+
+            # Calculate the average
+            # plant_assessment_val = calculate_average_prov(plant_assessment_val)
+
+            print('\n\n\n\n\nplant_assessment_val', calculate_average_prov(plant_assessment_val), plant_assessment_val)
 
             return {
                 "cities_diff": json.loads(cities_diff.to_json()),
                 "links_diff": json.loads(links_diff.to_json()),
                 "updated_params": updated_params,
                 "updated_in_out_flow_vals": new_city_val,
-                'plant': 1
+                'plant': plant_assessment_val,
+                'plant_total': calculate_average_prov(plant_assessment_val)
             }
 
         # Return original flows without updates
@@ -1138,25 +1199,21 @@ def do_reflow(city_name, updated_params:dict=None):
 
             original_flows = wff.gdf_links[original_flows_mask]
 
-            original_cities = wff.cities.to_crs(DEGREE_CRS).loc[wff.cities['region_city'].isin(original_flows['origin'])]
-
-            # params, plant_assessment_val = do_estimate(
-            #     uinput_spec_num=specialists,
-            #     uinput_industry=industry_name,
-            #     closest_cities=original_cities)
+            original_cities = wff.cities.to_crs(DEGREE_CRS).loc[wff.cities['region_city'].isin(original_flows['origin'])]  
 
             for col in original_cities.columns:
                 try:
-                    original_cities[col].round(0).astype(int)
+                    original_cities[col] = original_cities[col].round(0).astype(int)
                 except Exception:
                     pass
+            
+            original_cities.drop(columns=['h3_index', 'median_salary', 'num_in_migration',
+       'estimate', 'norm_outflow', 'city_attractiveness_coeff',
+       'flows_in', 'flows_out'], inplace=True)
+            print(original_cities.columns)
 
-            print('\n\n\n\n\n\n', original_cities)
-
-            # print(original_cities)
             return {"cities_diff": json.loads(original_cities.to_json()),
-                    'links_diff': json.loads(original_flows.to_json()),
-                    'plant': 1}
+                    'links_diff': json.loads(original_flows.to_json()),}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)+'___workflow')

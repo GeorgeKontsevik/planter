@@ -37,6 +37,7 @@ def do_estimate(
     Returns:
         pd.DataFrame: Enriched grouped_grads DataFrame with additional metrics.
     """
+    initial_cities = closest_cities.copy()
 
     cv = pd.read_parquet('api/app/data/cv.gzip').rename(
         columns={"hh_name": "specialty"})
@@ -45,9 +46,15 @@ def do_estimate(
     grouped_grads = pd.read_pickle("api/app/data/grouped_grads.pkl")
 
     uinput_spec_num_0 = dict()
-    for k in uinput_spec_num:
-        uinput_spec_num_0[k['specialty'].value] = k['count']
-    
+
+    try:
+        for k in uinput_spec_num:
+            uinput_spec_num_0[k['specialty'].value] = k['count']
+    except Exception:
+        for k in uinput_spec_num:
+            uinput_spec_num_0[k['specialty']] = k['count']
+
+
     uinput_spec_num = uinput_spec_num_0
     # print('\n\n\n\n', uinput_spec_num)
     YEAR = 2021
@@ -190,9 +197,10 @@ def do_estimate(
     # grouped_grads
 
     # %%
-    grouped_grads["working_population"] = (
-        (grouped_grads["population"] * 0.65).round(0).astype(int)
-    )
+    # grouped_grads["working_population"] = (
+    #     (grouped_grads["population"] * 0.65).round(0).astype(int)
+    # )
+    print(grouped_grads)
 
     grouped_grads.drop(columns=["population"], inplace=True)
 
@@ -200,7 +208,7 @@ def do_estimate(
         columns=[
             "city_capacity_grads_and_cv_sum",
             # "num_in_migration",
-            "working_population",
+            # "working_population",
             "factories_total",
         ]
     ).rename(columns={"graduates_per_year_forecast": "grads"})
@@ -283,13 +291,22 @@ def do_estimate(
     # print(uinput_spec_num)
 
     # print("\nУникальные специальности:")
-    # print(result)
+    if 'in_out_diff' in initial_cities.columns:
+        print(result, initial_cities)
+        reres = result.merge(initial_cities[['region_city', 'in_out_diff']], left_on='cluster_center', right_on='region_city')
+
+        reres['total_specialists'] += reres['in_out_diff']
+        reres.loc[reres['total_specialists'] < 0, 'total_specialists'] = 0
+        result = reres
+
+        # print("\n\n\n\n\nRERES\n\n\n\n", reres)
 
     # Выполняем расчеты
     for spec in result['specialty'].unique():
         if spec in uinput_spec_num:
             factor = uinput_spec_num[spec]
             # print(f"\nОбработка специальности '{spec}' с коэффициентом {factor}")
+            
             
             # Логика расчета
             grads_values = result.loc[result['specialty'] == spec, 'total_graduates'].fillna(0) / factor
@@ -334,7 +351,7 @@ def do_estimate(
 
         plant_assessment_val[spec]['all'] = ceil(plant_assessment_val[spec]['total_specialists'] + plant_assessment_val[spec]['total_graduates'])
 
-    # print(result)
+
     for col in result.columns:
         try:
             result[col] = round(result[col])

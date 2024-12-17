@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Body
 from pydantic import BaseModel
 from typing import Dict
 from functools import partial
@@ -44,8 +44,8 @@ cbm_path = os.path.join(directory, "city_migr_pred_1711_base.cbm")
 model = CatBoostRegressor()
 model.load_model(cbm_path)
 
-@router.get("/optimize",status_code=200)
-async def optimize_city(name):
+@router.post("/optimize",status_code=200)
+async def optimize_city(request=Body(...)):
     cols = [
     "population",
     "harsh_climate",
@@ -62,6 +62,10 @@ async def optimize_city(name):
     """
     Update city parameters and run optimization.
     """
+
+    name = request["city"]
+    industry = request["industry_name"]
+    specs = request["specialists"]
 
     try:
         # Fetch the city from the dataset
@@ -133,7 +137,7 @@ async def optimize_city(name):
             res = res.iloc[0].to_dict()
             # print('\n\n\n\n\n',res,'\n\n\n\n\n')
 
-            return do_reflow(name, updated_params=res)
+            return do_reflow(name, updated_params=res, industry=industry, specs=specs)
         except Exception as ex:
             logger.error(ex)
             raise ex

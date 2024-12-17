@@ -97,22 +97,7 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Analysis failed: ESTIMATOR {e}")
 
-        # print(params)
-
-        # print(plant_assessment_val)
-
-        # print(closest_cities.head(3))
-
         closest_cities2 = closest_cities.drop(columns=['h3_index']).merge(params, left_on='region_city', right_on='cluster_center', how='left').set_index('region_city').fillna(0)
-
-        # print(closest_cities2)
-
-        # print(closest_cities.head(3))
-
-        # print(params.head(3))
-
-        # Step 1: Merge the two tables on 'cluster_center' and 'region_city'
-        # merged_df = df2.merge(df1, left_on='region_city', right_on='cluster_center', how='left')
 
         # Step 2: Group by 'region_city' and aggregate specialists and their values into dictionaries
         closest_cities = closest_cities.merge(closest_cities2.groupby('region_city').apply(
@@ -144,7 +129,7 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
         closest_cities.drop(columns=['h3_index'], inplace=True)
 
 
-        print(closest_cities)
+        # print(closest_cities)
         # closest_cities['estimate'] = np.mean(closest_cities['prov_specialists'], closest_cities['prov_graduates'])
         # closest_cities['estimate'] = closest_cities['estimate'].round(3)
 
@@ -154,19 +139,43 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
         for col in closest_cities.columns:
             if col == 'estimate':continue
             try:
-                closest_cities[col].round(0).astype(int)
+                closest_cities[col] = closest_cities[col].round(0).astype(int)
             except Exception:
                 pass
         
+        def calculate_average_prov(data):
+            prov_values = []
+            
+            # Access the "plant" level
+
+            for specialty in data.values():
+                prov_values2 = []
+                for key, value in specialty.items():
+                    if key.startswith("prov_"):
+                        
+                        prov_values2.append(value)
+                value = sum(prov_values2)
+                value = 1 if value>1 else value
+                prov_values.append(value)
+            
+            # Calculate the average
+            if prov_values:
+                print(prov_values)
+                avg_prov = sum(prov_values) / len(prov_values)
+                avg_prov = 1 if avg_prov>1 else avg_prov
+                return avg_prov
+            else:
+                return None  # Return None or some indication if no prov values were found
         
         """Here should be the exact formula of this param calcs"""
         
-        
+        print('\n\n\n\n\nplant_assessment_val', calculate_average_prov(plant_assessment_val), plant_assessment_val)
 
         response = {
             "estimates": json.loads(closest_cities.to_json()),
             "links": json.loads(routes.to_json()),
-            "plant": plant_assessment_val
+            "plant": plant_assessment_val,
+            "plant_total":calculate_average_prov(plant_assessment_val)
         }
         return response
     except Exception as e:

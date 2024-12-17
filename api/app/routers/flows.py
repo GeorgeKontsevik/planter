@@ -1,4 +1,4 @@
-from fastapi import APIRouter, status
+from fastapi import APIRouter, status,Body
 from pydantic import BaseModel
 from typing import Dict, Optional
 from api.app.methods.workflows import do_reflow  # Replace with the correct module name
@@ -18,13 +18,17 @@ class FlowRequest2(BaseModel):
     updated_params: Optional[Dict[str, float]] = None  # Example: {"median_salary": 40000}
 
 @router.post("/", status_code=status.HTTP_200_OK)
-async def calculate_flows(request: FlowRequest1):
-    city_name = request.city
+async def calculate_flows(request=Body(...)):
+    city_name = request["city"]
+    # industry = request["industry_name"]
+    # specs = request["specialists"]
     return do_reflow(city_name, {})
 
 @router.post("/custom", status_code=status.HTTP_200_OK)
-async def calculate_flows_custom(request: FlowRequest2):
-    city_name = request.city
-    updated_params = request.updated_params
+async def calculate_flows_custom(request=Body(...)):
+    city_name = request["city"]
+    updated_params = request["updated_params"]
+    industry = request["industry_name"]
+    specs = request["specialists"]
     
-    return do_reflow(city_name, updated_params)
+    return do_reflow(city_name, updated_params, industry, specs)
