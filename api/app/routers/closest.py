@@ -97,11 +97,19 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Analysis failed: ESTIMATOR {e}")
 
-        
+        # print(params)
 
-        print(plant_assessment_val)
+        # print(plant_assessment_val)
 
-        closest_cities2 = closest_cities.drop(columns=['h3_index']).merge(params, left_on='region_city', right_on='cluster_center', how='left').set_index('region_city')
+        # print(closest_cities.head(3))
+
+        closest_cities2 = closest_cities.drop(columns=['h3_index']).merge(params, left_on='region_city', right_on='cluster_center', how='left').set_index('region_city').fillna(0)
+
+        print(closest_cities2)
+
+        # print(closest_cities.head(3))
+
+        # print(params.head(3))
 
         # Step 1: Merge the two tables on 'cluster_center' and 'region_city'
         # merged_df = df2.merge(df1, left_on='region_city', right_on='cluster_center', how='left')
@@ -113,11 +121,12 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
                     'prov_graduates': row['prov_graduates'],
                     'prov_specialists': row['prov_specialists'],
                     'total_graduates': row['total_graduates'],
-                    'total_specialists': row['total_specialists']
+                    'total_specialists': row['total_specialists'],
+                    'all': row['total_specialists'] + row['total_graduates']
                 } for _, row in x.iterrows()
             }
         ).reset_index(name='specialists_data'), on='region_city')
-
+        # closest_cities['specialists_data'] = closest_cities['specialists_data'].astype(str)
         
         # closest_cities["working_population"] = (
         #     (closest_cities["population"] * WORKING_POPULATION_PERCENT).round(0).fillna(0).astype(int)
@@ -127,6 +136,9 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
         closest_cities.drop(columns=['h3_index'], inplace=True)
         # closest_cities['estimate'] = np.mean(closest_cities['specialty']['prov_specialists'], closest_cities['specialty']['prov_graduates'])
         # closest_cities['estimate'] = closest_cities['estimate'].round(3)
+
+        print(closest_cities)
+        closest_cities.fillna(0, inplace=True)
         
         
         """Here should be the exact formula of this param calcs"""

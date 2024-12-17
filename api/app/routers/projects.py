@@ -77,9 +77,7 @@ async def list_projects(db: AsyncSession = Depends(get_db)):
     )
 async def get_project(project_id: int,
                     db: AsyncSession = Depends(get_db)):
-    
-      
-    
+
     specialist_crud_instance = crud.SpecialistCRUD(db)
     # Fetch related entities
     specialists = await specialist_crud_instance.get_specialists_by_project_id(project_id)

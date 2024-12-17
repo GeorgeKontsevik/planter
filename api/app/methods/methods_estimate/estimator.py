@@ -48,7 +48,7 @@ def do_estimate(
         uinput_spec_num_0[k['specialty'].value] = k['count']
     
     uinput_spec_num = uinput_spec_num_0
-
+    # print('\n\n\n\n', uinput_spec_num)
     YEAR = 2021
     cv = cv[cv["year"] == YEAR]
 
@@ -94,6 +94,8 @@ def do_estimate(
             .drop_duplicates()
             .tolist()
             )
+        
+    # print('\n\n\n\n\n', uinput_spec_num_2)
     # --- START ---
 
     competitor_industries = set(competitor_industries)
@@ -108,13 +110,13 @@ def do_estimate(
     fact_col = []
 
     for col in closest_cities.columns:
-        if "factor" in col and uinput_industry in col:
+        if "factor" in col in col:
             fact_col.append(col)
 
         if "factor" in col and any(industry in col for industry in competitor_industries):
             competitor_fatories.append(col)
 
-        if "grad" in col and uinput_industry in col:
+        if "grad" in col in col:
             grad_col.append(col)
 
     closest_cities["competitors_factories_num"] = closest_cities[competitor_fatories].sum(axis=1)
@@ -134,6 +136,8 @@ def do_estimate(
     # %%
     groups = set(groups)
 
+    # print('\n',groups, '\n')
+
     # %%
     # groups
 
@@ -148,14 +152,17 @@ def do_estimate(
     mask_groups = grouped_grads["edu_group_code"].isin(groups)
     grouped_grads = grouped_grads[mask_groups]
 
+    # print(grouped_grads.head().iloc[:,2:])
+
     # %%
     # grouped_grads
 
     # %%
     # grouped_grads.loc[grouped_grads["type"] == "ВПО"]
+    grouped_grads.rename(columns={'id_cv':'cv_count'}, inplace=True)
 
     # %%
-    grouped_grads.loc[grouped_grads["type"] == "ВПО", "type"] = "СПО"
+    grouped_grads.loc[grouped_grads["type"] == "ВПО", "type"] = "graduates"
     grouped_grads.loc[grouped_grads["type"] == "СПО", "type"] = "graduates"
     grouped_grads.loc[grouped_grads["type"] == "CV", "type"] = "specialists"
 
@@ -231,22 +238,32 @@ def do_estimate(
 
     # %%
     # grouped_grads
-
+    # print(grouped_grads.head(3))
     # %%
     # Шаг 1: Создание нового столбца 'specialty' на основе словаря
     def map_specialty(edu_code):
+        specialties = []  # Create a list to collect specialties
         for specialty, codes in uinput_spec_num_2.items():
             if edu_code in codes:
-                return specialty
-        return 'Другое'  # Если не нашли специальность
+                specialties.append(specialty)  # Append to list if found
+        return specialties if specialties else ['Другое']  # Return 'Другое' if no specialties found
 
+    # Apply the function to get a column of lists
     grouped_grads['specialty'] = grouped_grads['edu_group_code'].apply(map_specialty)
+
+    # Now explode the DataFrame to create new rows for each specialty
+    grouped_grads = grouped_grads.explode('specialty').reset_index(drop=True)
+
+    # Output the modified DataFrame
+    # print(grouped_grads)
 
     # Шаг 2: Группировка по cluster_center и specialty для подсчета выпускников и специалистов
     result = grouped_grads.groupby(['cluster_center', 'specialty']).agg({
         'grads': 'sum',        # Сумма выпускников
         'cv_count': 'sum'      # Сумма специалистов
     }).reset_index()
+
+    # print(result)
 
     # Шаг 3: Переименование столбцов для ясности
     result.rename(columns={'grads': 'total_graduates', 'cv_count': 'total_specialists'}, inplace=True)
@@ -265,7 +282,7 @@ def do_estimate(
     # print(uinput_spec_num)
 
     # print("\nУникальные специальности:")
-    # print(result['specialty'].unique())
+    # print(result)
 
     # Выполняем расчеты
     for spec in result['specialty'].unique():
@@ -282,7 +299,7 @@ def do_estimate(
             result.loc[result['specialty'] == spec, 'prov_specialists'] = round(specialists_values,2)
         else:
             print(f"Специальность '{spec}' не найдена в словаре.")
-
+    # print(result)
     # Проверяем итоговый результат
     # print("\nИтоговый DataFrame:")
     # print(result[['specialty', 'total_graduates', 'total_specialists', 'prov_graduates', 'prov_specialists']])
@@ -314,5 +331,5 @@ def do_estimate(
         if plant_assessment_val[spec]['prov_specialists']>1:
             plant_assessment_val[spec]['prov_specialists'] = 1
 
-
+    # print(result)
     return result, plant_assessment_val
