@@ -7,7 +7,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Dict
 import pandas as pd
-
+from math import ceil
 
 from api.app.utils.data_reader import cities
 from api.app.methods.methods_get_closest.select_closest_cities import find_n_closest_cities
@@ -105,7 +105,7 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
 
         closest_cities2 = closest_cities.drop(columns=['h3_index']).merge(params, left_on='region_city', right_on='cluster_center', how='left').set_index('region_city').fillna(0)
 
-        print(closest_cities2)
+        # print(closest_cities2)
 
         # print(closest_cities.head(3))
 
@@ -126,6 +126,14 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
                 } for _, row in x.iterrows()
             }
         ).reset_index(name='specialists_data'), on='region_city')
+
+        closest_cities.drop(columns=['estimate'], inplace=True)
+        try:
+            closest_cities = closest_cities.merge(closest_cities2.groupby('region_city')[['prov_specialists', 'prov_graduates']].mean().mean(axis=1).to_frame().round(2), on='region_city').rename(columns={0:'estimate'})
+        except Exception as ex:
+            print(ex)
+        # closest_cities = closest_cities.merge(closest_cities2.groupby('region_city')[['prov_specialists', 'prov_graduates']].mean(axis=1)
+        # .reset_index(name='estimate'), on='region_city')
         # closest_cities['specialists_data'] = closest_cities['specialists_data'].astype(str)
         
         # closest_cities["working_population"] = (
@@ -134,11 +142,21 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
 
         closest_cities.rename(columns={f'factories_{query_params.industry_name}': 'factories_count', f'graduates_{query_params.industry_name}': 'graduates_count'}, inplace=True)
         closest_cities.drop(columns=['h3_index'], inplace=True)
-        # closest_cities['estimate'] = np.mean(closest_cities['specialty']['prov_specialists'], closest_cities['specialty']['prov_graduates'])
-        # closest_cities['estimate'] = closest_cities['estimate'].round(3)
+
 
         print(closest_cities)
+        # closest_cities['estimate'] = np.mean(closest_cities['prov_specialists'], closest_cities['prov_graduates'])
+        # closest_cities['estimate'] = closest_cities['estimate'].round(3)
+
+        
         closest_cities.fillna(0, inplace=True)
+
+        for col in closest_cities.columns:
+            if col == 'estimate':continue
+            try:
+                closest_cities[col].round(0).astype(int)
+            except Exception:
+                pass
         
         
         """Here should be the exact formula of this param calcs"""

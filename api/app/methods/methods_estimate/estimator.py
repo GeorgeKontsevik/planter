@@ -2,6 +2,7 @@ import geopandas as gpd
 import pandas as pd
 import numpy as np
 from typing import List
+from math import ceil
 
 # uinput_industry -- input industry
 # uinput_spec_num -- input dict of specs and their num
@@ -331,5 +332,14 @@ def do_estimate(
         if plant_assessment_val[spec]['prov_specialists']>1:
             plant_assessment_val[spec]['prov_specialists'] = 1
 
+        plant_assessment_val[spec]['all'] = ceil(plant_assessment_val[spec]['total_specialists'] + plant_assessment_val[spec]['total_graduates'])
+
     # print(result)
+    for col in result.columns:
+        try:
+            result[col] = round(result[col])
+            result[col] = result[col].astype(int)
+        except Exception:
+            pass
+
     return result, plant_assessment_val

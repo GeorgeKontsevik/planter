@@ -125,13 +125,13 @@ async def optimize_city(name):
             res.loc[:,'harsh_climate'] = x[1]
             res.loc[:,"factories_total"]=x[9]
             
-            print(res.loc[:,scaler_x.feature_names_in_])
-            print(scaler_x.feature_names_in_, res.columns)
+            # print(res.loc[:,scaler_x.feature_names_in_])
+            # print(scaler_x.feature_names_in_, res.columns)
 
             res.loc[:,scaler_x.feature_names_in_] = scaler_x.inverse_transform(res.loc[:,scaler_x.feature_names_in_])
 
             res = res.iloc[0].to_dict()
-            print(res)
+            # print('\n\n\n\n\n',res,'\n\n\n\n\n')
 
             return do_reflow(name, updated_params=res)
         except Exception as ex:

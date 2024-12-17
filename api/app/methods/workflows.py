@@ -1066,11 +1066,11 @@ def do_reflow(city_name, updated_params:dict=None):
         # Update parameters and recalculate if needed
         if updated_params:
             city_mask = wff.cities["region_city"] == city_name
-            print('\n\n\n\n', updated_params, wff.current_cities_state.loc[city_mask,:].to_dict())
+            # print('\n\n\n\n', updated_params, wff.current_cities_state.loc[city_mask,:].to_dict())
 
             wff.update_city_params(city_name, updated_params)
             wff.recalculate_after_update()
-            print('\n\n\n\n', wff.current_cities_state.loc[city_mask,:].to_dict())
+            # print('\n\n\n\n', wff.current_cities_state.loc[city_mask,:].to_dict())
 
             city_mask = wff.cities["region_city"] == city_name
             new_city_val = wff.cities.loc[city_mask,["flows_in", "flows_out"]].values.tolist()
@@ -1090,14 +1090,36 @@ def do_reflow(city_name, updated_params:dict=None):
             cities_diff = diff[mask2].dropna()
             links_diff = links_diff[(links_diff['origin'].isin(cities_diff['region_city'])) \
                                     & (links_diff['destination'].isin([city_name]))]
+            # mask2 = diff['region_city'].isin(links_diff['destination'])
+            # cities_diff = diff[mask2].dropna()
             # print('\n\n\n\n', type(cities_diff.geometry.item()), type(area),\
             #        cities_diff[cities_diff.interse])
 
-            print({"cities_diff": json.loads(cities_diff.to_json()),
-                "links_diff": json.loads(links_diff.to_json()),
-                "updated_params": updated_params,
-                "updated_in_out_flow_vals": new_city_val,
-                'plant': 1})
+            for col in cities_diff.columns:
+                try:
+                    cities_diff[col] = cities_diff[col].round(0).astype(int)
+                except Exception as ex:
+                    print(ex)
+                    # pass
+            
+            print('\n\n\n\n\n\n', cities_diff)
+            # print({"cities_diff": json.loads(cities_diff.to_json()),
+            #     "links_diff": json.loads(links_diff.to_json()),
+            #     "updated_params": updated_params,
+            #     "updated_in_out_flow_vals": new_city_val,
+            #     'plant': 1})
+
+            for v in new_city_val:
+                for k in v:
+                    k = int(k)
+
+            for k,v in updated_params.items():
+                print(v)
+                v = int(round(v))
+                print(v)
+                updated_params[k] = v
+            
+            print(updated_params, new_city_val)
 
             return {
                 "cities_diff": json.loads(cities_diff.to_json()),
@@ -1122,6 +1144,14 @@ def do_reflow(city_name, updated_params:dict=None):
             #     uinput_spec_num=specialists,
             #     uinput_industry=industry_name,
             #     closest_cities=original_cities)
+
+            for col in original_cities.columns:
+                try:
+                    original_cities[col].round(0).astype(int)
+                except Exception:
+                    pass
+
+            print('\n\n\n\n\n\n', original_cities)
 
             # print(original_cities)
             return {"cities_diff": json.loads(original_cities.to_json()),
