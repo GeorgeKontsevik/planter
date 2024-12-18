@@ -1140,6 +1140,16 @@ def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None):
                 del updated_params['population']
             except Exception:
                 pass
+
+            city_mask = wff.cities["region_city"] == city_name
+
+            # original_flows_mask = wff.gdf_links['destination'].isin([city_name])
+
+            original_flows_mask = wff.gdf_links['destination'].isin([city_name])
+
+            original_flows = wff.gdf_links[original_flows_mask]
+
+            original_cities = wff.cities.to_crs(DEGREE_CRS).loc[wff.cities['region_city'].isin(original_flows['origin'])]  
             
             # print(updated_params, new_city_val)
             # print('\n\n\n\nGO\n\n\n\n',original_cities.merge(cities_diff[['region_city', 'in_out_diff']], on='region_city', how='right'))
@@ -1172,7 +1182,7 @@ def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None):
                 if prov_values:
                     avg_prov = sum(prov_values) / len(prov_values)
                     avg_prov = 1 if avg_prov>1 else avg_prov
-                    return avg_prov
+                    return round(avg_prov,2)
                 else:
                     return None  # Return None or some indication if no prov values were found
 

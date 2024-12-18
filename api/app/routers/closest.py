@@ -165,7 +165,7 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
                 print(prov_values)
                 avg_prov = sum(prov_values) / len(prov_values)
                 avg_prov = 1 if avg_prov>1 else avg_prov
-                return avg_prov
+                return round(avg_prov,2)
             else:
                 return None  # Return None or some indication if no prov values were found
         
