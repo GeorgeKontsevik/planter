@@ -1088,7 +1088,7 @@ def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None):
             wff.recalculate_after_update()
             # print('\n\n\n\n', wff.current_cities_state.loc[city_mask,:].to_dict())
 
-            print('\n\n\n\n\n\n\n\n', wff.cities)
+            # print('\n\n\n\n\n\n\n\n', wff.cities)
 
             new_city_val = wff.cities.loc[city_mask,["flows_in", "flows_out"]].values.tolist()
 
@@ -1161,7 +1161,7 @@ def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None):
             except Exception as ex:
                 print(ex)
                 raise ex
-            print(plant_assessment_val, cities_diff)
+            # print(plant_assessment_val, cities_diff)
 
             def calculate_average_prov(data):
                 prov_values = []
@@ -1189,7 +1189,7 @@ def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None):
             # Calculate the average
             # plant_assessment_val = calculate_average_prov(plant_assessment_val)
 
-            print('\n\n\n\n\nplant_assessment_val', calculate_average_prov(plant_assessment_val), plant_assessment_val)
+            # print('\n\n\n\n\nplant_assessment_val', calculate_average_prov(plant_assessment_val), plant_assessment_val)
 
             return {
                 "cities_diff": json.loads(cities_diff.to_json()),

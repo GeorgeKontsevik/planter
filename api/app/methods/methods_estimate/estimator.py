@@ -200,7 +200,7 @@ def do_estimate(
     # grouped_grads["working_population"] = (
     #     (grouped_grads["population"] * 0.65).round(0).astype(int)
     # )
-    print(grouped_grads)
+    # print(grouped_grads)
 
     grouped_grads.drop(columns=["population"], inplace=True)
 
@@ -292,7 +292,7 @@ def do_estimate(
 
     # print("\nУникальные специальности:")
     if 'in_out_diff' in initial_cities.columns:
-        print(result, initial_cities)
+        # print(result, initial_cities)
         reres = result.merge(initial_cities[['region_city', 'in_out_diff']], left_on='cluster_center', right_on='region_city')
 
         reres['total_specialists'] += reres['in_out_diff']

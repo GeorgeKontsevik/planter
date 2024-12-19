@@ -73,7 +73,7 @@ async def get_layer(layer_id: int, db: AsyncSession = Depends(get_db)):
 @router.get("/listing/{project_id}")
 async def get_layers_by_project_id(project_id: int, db: AsyncSession = Depends(get_db)):
     layer_crud = crud.LayerCRUD(db)
-    print('\n\n\n\n\n', project_id)
+    # print('\n\n\n\n\n', project_id)
     layers = await layer_crud.get_layers_by_project(project_id)
     if not layers:
         raise HTTPException(status_code=404, detail="No layers found for this project")

@@ -91,13 +91,34 @@ class Layer(Base):
     scaled_flows_forvis = Column(JSON, nullable=True)  # Adapt based on your model
     layer_mini_ids = Column(String, nullable=False)
     duration=Column(Float, nullable=True)
+    in_diff=Column(Integer, nullable=True)
+    out_diff=Column(Integer, nullable=True)
+    in_out_diff=Column(Integer, nullable=True)
+
+    city_category = Column(String,nullable=True)
+    factories_total=Column(Integer,nullable=True)
+    harsh_climate=Column(Integer,nullable=True)
+    migrations_from_each_city=Column(Float,nullable=True)
+    region_city=Column(String,nullable=True)
+    ueqi_citywide_space=Column(Integer,nullable=True)
+    ueqi_green_spaces=Column(Integer,nullable=True)
+    ueqi_public_and_business_infrastructure=Column(Integer,nullable=True)
+    ueqi_residential=Column(Integer,nullable=True)
+    ueqi_social_and_leisure_infrastructure=Column(Integer,nullable=True)
+    ueqi_street_networks=Column(Integer,nullable=True)
+    median_salary=Column(Integer, nullable=True)
+    estimate=Column(Float, nullable=True)
 
     
 
     def __init__(self, project_id, group_id=None, name=None, geometry=None, style=None, 
                  group_name=None, big_flows=None, destination=None, destination_attr=None, 
                  distance=None, flow=None, origin=None, origin_attr=None, population=None, 
-                 scaled_flows_forvis=None, layer_mini_ids=None, duration=None):
+                 scaled_flows_forvis=None, layer_mini_ids=None, duration=None, in_diff=None, out_diff=None,in_out_diff=None,
+                 city_category=None,factories_total=None,harsh_climate=None,migrations_from_each_city=None,region_city=None,ueqi_citywide_space=None,ueqi_green_spaces=None, ueqi_public_and_business_infrastructure=None,ueqi_residential=None,ueqi_social_and_leisure_infrastructure=None,ueqi_street_networks=None,
+                 median_salary=None, estimate=None
+                 ):
+        
         self.project_id = project_id
         self.group_id = group_id
         self.layer_mini_ids = layer_mini_ids
@@ -114,6 +135,23 @@ class Layer(Base):
         self.origin_attr = origin_attr  # Set origin_attr
         self.population = population  # Set population
         self.scaled_flows_forvis = scaled_flows_forvis  # Set scaled flows
+        self.in_diff = in_diff
+        self.out_diff=out_diff
         self.duration = duration
+        self.in_out_diff=in_out_diff
+        self.city_category = city_category
+        self.factories_total=factories_total
+        self.harsh_climate=harsh_climate
+        self.migrations_from_each_city=migrations_from_each_city
+        self.region_city=region_city
+        self.ueqi_citywide_space=ueqi_citywide_space
+        self.ueqi_green_spaces=ueqi_green_spaces
+        self.ueqi_public_and_business_infrastructure=ueqi_public_and_business_infrastructure
+        self.ueqi_residential=ueqi_residential
+        self.ueqi_social_and_leisure_infrastructure=ueqi_social_and_leisure_infrastructure
+        self.ueqi_street_networks=ueqi_street_networks
+
+        self.median_salary=median_salary
+        self.estimate=estimate
     # Define the relationship with Project
     project = relationship("Project", back_populates="layers")

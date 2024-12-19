@@ -212,7 +212,27 @@ class LayerCRUD:
                             "origin_attr": layer.origin_attr,  # Adapt based on your model
                             "population": layer.population,  # Adapt based on your model
                             "scaled_flows_forvis": layer.scaled_flows_forvis,  # Adapt based on your model
-                            "duration": layer.duration
+                            "duration": layer.duration,
+                            "in_out_diff":layer.in_out_diff,
+                            "out_diff":layer.out_diff,
+                            "in_diff":layer.in_diff,
+
+                            "city_category":layer.city_category,
+
+                            "factories_total":layer.factories_total,
+                            "harsh_climate":layer.harsh_climate,
+                            "migrations_from_each_city":layer.migrations_from_each_city,
+                            "region_city":layer.region_city,
+                            "ueqi_citywide_space":layer.ueqi_citywide_space,
+                            "ueqi_green_spaces":layer.ueqi_green_spaces,
+
+                            "ueqi_public_and_business_infrastructure":layer.ueqi_public_and_business_infrastructure,
+                            "ueqi_residential":layer.ueqi_residential,
+                            "ueqi_social_and_leisure_infrastructure":layer.ueqi_social_and_leisure_infrastructure,
+                            "ueqi_street_networks":layer.ueqi_street_networks,
+                            "median_salary":layer.median_salary,
+                            'estimate':layer.estimate
+
                         }
                     }
                         ]
@@ -238,7 +258,26 @@ class LayerCRUD:
                                     "origin_attr": layer.origin_attr,  # Adapt based on your model
                                     "population": layer.population,  # Adapt based on your model
                                     "scaled_flows_forvis": layer.scaled_flows_forvis,  # Adapt based on your model
-                                    "duration": layer.duration
+                                    "duration": layer.duration,
+                                    "in_out_diff":layer.in_out_diff,
+                                    "out_diff":layer.out_diff,
+                                    "in_diff":layer.in_diff,
+                                    "city_category":layer.city_category,
+
+                                    "factories_total":layer.factories_total,
+                                    "harsh_climate":layer.harsh_climate,
+                                    "migrations_from_each_city":layer.migrations_from_each_city,
+                                    "region_city":layer.region_city,
+                                    "ueqi_citywide_space":layer.ueqi_citywide_space,
+                                    "ueqi_green_spaces":layer.ueqi_green_spaces,
+
+                                    "ueqi_public_and_business_infrastructure":layer.ueqi_public_and_business_infrastructure,
+                                    "ueqi_residential":layer.ueqi_residential,
+                                    "ueqi_social_and_leisure_infrastructure":layer.ueqi_social_and_leisure_infrastructure,
+                                    "ueqi_street_networks":layer.ueqi_street_networks,
+                                    "median_salary":layer.median_salary,
+                                    'estimate':layer.estimate
+
                                 }
                             }
                         )
@@ -328,7 +367,27 @@ class LayerCRUD:
                         population=f.get("population"),  # Handle optional population
                         scaled_flows_forvis=f.get("scaled_flows_forvis"),  # Handle optional scaled_flows_forvis
                         layer_mini_ids = await self.generate_unique_group_id(project_id),
-                        group_id=new_group_id
+                        group_id=new_group_id,
+                        in_out_diff =f.get("in_out_diff"),
+                        out_diff = f.get("out_diff"),
+                        in_diff = f.get("in_diff"),
+
+                        city_category = f.get("city_category"),
+
+                        factories_total=f.get("factories_total"),
+                        harsh_climate=f.get("harsh_climate"),
+                        migrations_from_each_city=f.get("migrations_from_each_city"),
+                        region_city=f.get("region_city"),
+                        ueqi_citywide_space=f.get("ueqi_citywide_space"),
+                        ueqi_green_spaces=f.get("ueqi_green_spaces"),
+
+                        ueqi_public_and_business_infrastructure=f.get("ueqi_public_and_business_infrastructure"),
+                        ueqi_residential=f.get("ueqi_residential"),
+                        ueqi_social_and_leisure_infrastructure=f.get("ueqi_social_and_leisure_infrastructure"),
+                        ueqi_street_networks=f.get("ueqi_street_networks"),
+
+                        median_salary=f.get("median_salary"),
+                        estimate=f.get("estimate")
                     )
                     layers.append(layer)
 

@@ -383,6 +383,7 @@ async def get_project_everything(
         raise HTTPException(status_code=404, detail="Project not found")
 
     # print(layers)
+    # print(list(layers.values())[0])
 
     # Assemble the response
     return {
