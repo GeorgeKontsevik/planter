@@ -12,6 +12,7 @@ from geoalchemy2.shape import to_shape, from_shape
 from shapely.geometry import mapping
 from sqlalchemy import update
 from fastapi import HTTPException
+import uuid
 
 import logging
 logging.basicConfig()
@@ -152,50 +153,195 @@ class LayerCRUD:
             layer.geometry = to_shape(layer.geometry).__geo_interface__
         return layer
 
-    async def get_layers_by_project(self, project_id: int):
+    async def generate_unique_group_id(self, project_id: int):
+        # Fetch all layers associated with the project
+        result = await self.db.execute(
+            select(models.Layer.group_id).filter(models.Layer.project_id == project_id)
+        )
+        # Collect all current group_ids
+        current_group_ids = {row[0] for row in result.fetchall() if row[0] is not None}
 
+        # Generate a unique UUID not in the current group_ids
+        while True:
+            new_group_id = str(uuid.uuid4())
+            if new_group_id not in current_group_ids:
+                return new_group_id
+
+
+    async def get_layers_by_project(self, project_id: int):
         # Fetch all layers associated with a specific project
         result = await self.db.execute(
             select(models.Layer).filter(models.Layer.project_id == project_id)
         )
         layers = result.scalars().all()
         
+        group_counter = {}
+        all_layers = {}
 
-        # Serialize geometry for each layer
-        return [
-            {
-                "id": layer.id,
-                "name": layer.name,
-                "project_id": layer.project_id,
-                "geometry": serialize_geometry(layer.geometry),
-                "style": layer.style,
-            }
-            for layer in layers
-        ]
-    
-    async def create_project_with_layers(self, layers_data: dict):
+        for layer in layers:
 
-            layers = []
-            for layer_data in layers_data["layers"]:
-                if layer_data["data"]["type"] == "FeatureCollection":
-                    for feature in layer_data["data"]["features"]:
-                        geom = shape(feature["geometry"])
-                        wkt_geometry = from_shape(geom, srid=4326)
-                        
-                        layer = models.Layer(
-                            name=layer_data["name"],
-                            geometry=wkt_geometry,
-                            project_id=layers_data["project_id"],
-                            style=layer_data.get("style", {})  # Handling dynamic properties
+            if layer.group_id not in all_layers:
+                all_layers[layer.group_id] = {
+                    'name': layer.group_name,
+                    'project_id': layer.project_id,
+                    'layers': []
+                }
+
+                group_counter[layer.group_id] = []
+
+            
+            # Check if the layer's group exists in all_layers
+            if layer.name not in group_counter[layer.group_id]:
+                group_counter[layer.group_id].append(layer.name)
+                all_layers[layer.group_id]['layers'].append({
+                    "name": layer.name,  # You might have to ensure this is retrieved correctly
+                    "data": {
+                        "type": "FeatureCollection",
+                        "features": [
+                            {
+                        "id": layer.id,
+                        "type": "Feature",
+                        "geometry": serialize_geometry(layer.geometry),  # Ensure this is a valid GeoJSON
+                        "properties": {
+                            "big_flows": layer.big_flows,  # Adapt based on your model
+                            "destination": layer.destination,  # Adapt based on your model
+                            "destination_attr": layer.destination_attr,  # Adapt based on your model
+                            "distance": layer.distance,  # Adapt based on your model
+                            "flow": layer.flow,  # Adapt based on your model
+                            "origin": layer.origin,  # Adapt based on your model
+                            "origin_attr": layer.origin_attr,  # Adapt based on your model
+                            "population": layer.population,  # Adapt based on your model
+                            "scaled_flows_forvis": layer.scaled_flows_forvis,  # Adapt based on your model
+                            "duration": layer.duration
+                        }
+                    }
+                        ]
+                    },
+                    "style": layer.style  # Store the style directly here
+                })
+
+            else:
+                for i in all_layers[layer.group_id]['layers']:
+                    if layer.name == i['name']:
+                        i['data']['features'].append(
+                                    {
+                                "id": layer.id,
+                                "type": "Feature",
+                                "geometry": serialize_geometry(layer.geometry),  # Ensure this is a valid GeoJSON
+                                "properties": {
+                                    "big_flows": layer.big_flows,  # Adapt based on your model
+                                    "destination": layer.destination,  # Adapt based on your model
+                                    "destination_attr": layer.destination_attr,  # Adapt based on your model
+                                    "distance": layer.distance,  # Adapt based on your model
+                                    "flow": layer.flow,  # Adapt based on your model
+                                    "origin": layer.origin,  # Adapt based on your model
+                                    "origin_attr": layer.origin_attr,  # Adapt based on your model
+                                    "population": layer.population,  # Adapt based on your model
+                                    "scaled_flows_forvis": layer.scaled_flows_forvis,  # Adapt based on your model
+                                    "duration": layer.duration
+                                }
+                            }
                         )
-                        layers.append(layer)
+                
 
-            self.db.add_all(layers)
-            await self.db.commit()
-            # await self.db.refresh(project)
+            # Append layer data in GeoJSON format
 
-            return {"layers": [{"id": layer.id, "name": layer.name} for layer in layers]
-            }
+            # for l in all_layers[layer.group_id]['layers']:
+            #     l["data"]["features"].append(
+            #     {
+            #         "id": layer.id,
+            #         "type": "Feature",
+            #         "geometry": serialize_geometry(layer.geometry),  # Ensure this is a valid GeoJSON
+            #         "properties": {
+            #             "big_flows": layer.big_flows,  # Adapt based on your model
+            #             "destination": layer.destination,  # Adapt based on your model
+            #             "destination_attr": layer.destination_attr,  # Adapt based on your model
+            #             "distance": layer.distance,  # Adapt based on your model
+            #             "flow": layer.flow,  # Adapt based on your model
+            #             "origin": layer.origin,  # Adapt based on your model
+            #             "origin_attr": layer.origin_attr,  # Adapt based on your model
+            #             "population": layer.population,  # Adapt based on your model
+            #             "scaled_flows_forvis": layer.scaled_flows_forvis  # Adapt based on your model
+            #         }
+            #     }
+            # )
+
+        # Prepare the final response structure
+        layers_response = []
+
+        for _, group in all_layers.items():
+            layers_response.append(group)
+            # print('\n\n\n\n\n\n\n\n\n\n', group["style"])
+            # layers_response.append({
+            #     "name": group["name"],
+            #     "data": group["data"],
+            #     "style": {
+            #         "fillOpacity": group["style"].get("fillOpacity", 1),   # Adjust these as per your style model
+            #         "lineWidth": group["style"].get("lineWidth", 1),     
+            #         "color": group["style"].get("color"),          # 
+            #         'circleRadius': group['style'].get('circleRadius',1)
+            #         # Adjust as per your model
+            #     }
+            # })
+
+        return {
+            "layer_groups": layers_response
+        }
+        
+    async def create_project_with_layers(self, layers_data: dict):
+        layers = []
+
+        # Ensure project_id is provided
+        project_id = layers_data.get("project_id")
+        if project_id is None:
+            raise ValueError("project_id must be provided")
+        
+        new_group_id = await self.generate_unique_group_id(project_id)
+        print(f"Generated unique group_id: {new_group_id}")
+
+        # Create a layer instance for each feature in the provided data
+        for layer_data in layers_data.get("layers", []):
+            if layer_data["data"]["type"] == "FeatureCollection":
+
+                # print(layer_data, '\n\n\n\n\n\\n\n', layer_data["data"]["features"])
+                for feature in layer_data["data"]["features"]:
+                    f = feature.get('properties')
+                    # Convert GeoJSON to Shapely geometry and then to WKT
+                    geom = shape(feature["geometry"])
+                    wkt_geometry = from_shape(geom, srid=4326)
+
+                    # Create Layer object with robust handling for optional fields
+                    layer = models.Layer(
+                        project_id=project_id,  # Ensure project_id exists
+                        group_name=layers_data.get('name'),  # Default if not present
+                        geometry=wkt_geometry,
+                        name=str(layer_data.get("name")),  # Use .get() for safety
+                        style=layer_data.get("style", {}),  # Handle missing style dynamically
+                        big_flows=f.get("big_flows"),  # Include big_flows if present
+                        destination=f.get("destination"),  # Handle optional destination
+                        duration=f.get("duration"),
+                        destination_attr = f.get("destination_attr") if f.get("destination_attr") is not None else None,  # Handle optional
+                        distance=f.get("distance"),  # Handle optional distance
+                        flow=f.get("flow"),  # Handle optional flow
+                        origin=f.get("origin"),  # Handle optional origin
+                        origin_attr=f.get("origin_attr") if f.get("origin_attr") is not None else None,  # Handle optional origin_attr
+                        population=f.get("population"),  # Handle optional population
+                        scaled_flows_forvis=f.get("scaled_flows_forvis"),  # Handle optional scaled_flows_forvis
+                        layer_mini_ids = await self.generate_unique_group_id(project_id),
+                        group_id=new_group_id
+                    )
+                    layers.append(layer)
+
+        # Store layers in the database
+        self.db.add_all(layers)
+        await self.db.commit()
+
+        # Optionally, refresh each layer if your Layer model requires it for other fields (like IDs)
+        for layer in layers:
+            await self.db.refresh(layer)
+
+        # Return a response with layer IDs and names
+        return {"layers": [{"id": layer.id, "name": layer.name} for layer in layers]}
 
     
     # async def update_layer(self, layer_id: int, updated_data: dict):

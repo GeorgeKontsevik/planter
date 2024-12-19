@@ -173,6 +173,8 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
         
         print('\n\n\n\n\nplant_assessment_val', calculate_average_prov(plant_assessment_val, workforce_type), plant_assessment_val)
 
+        closest_cities['percent_grads'] = 1
+
         response = {
             "estimates": json.loads(closest_cities.to_json()),
             "links": json.loads(routes.to_json()),

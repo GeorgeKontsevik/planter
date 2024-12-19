@@ -1019,7 +1019,7 @@ import geopandas as gpd
 import json
 
 # Load or initialize WorkForceFlows
-filename = "wff_0712.pkl"
+filename = "wff_1812.pkl"
 directory = "api/app/data"
 
 
@@ -1061,7 +1061,7 @@ def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None):
         """
         FIX THAT AREA THING
         """
-        area = wff.initial_cities_state.loc[wff.initial_cities_state['region_city']==city_name, 'geometry'].to_frame().to_crs(METRIC_CRS).buffer(200*1e3).to_crs(DEGREE_CRS).to_frame()
+        # area = wff.initial_cities_state.loc[wff.initial_cities_state['region_city']==city_name, 'geometry'].to_frame().to_crs(METRIC_CRS).buffer(200*1e3).to_crs(DEGREE_CRS).to_frame()
 
         # Update parameters and recalculate if needed
         if updated_params:
@@ -1069,11 +1069,11 @@ def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None):
 
             # original_flows_mask = wff.gdf_links['destination'].isin([city_name])
 
-            original_flows_mask = wff.gdf_links['destination'].isin([city_name])
+            # original_flows_mask = wff.gdf_links['destination'].isin([city_name])
 
-            original_flows = wff.gdf_links[original_flows_mask]
+            # original_flows = wff.gdf_links[original_flows_mask]
 
-            original_cities = wff.cities.to_crs(DEGREE_CRS).loc[wff.cities['region_city'].isin(original_flows['origin'])]  
+            # original_cities = wff.cities.to_crs(DEGREE_CRS).loc[wff.cities['region_city'].isin(original_flows['origin'])]  
 
 
             # original_cities = wff.cities.loc[city_mask,:]

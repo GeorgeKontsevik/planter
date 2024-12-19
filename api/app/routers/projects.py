@@ -6,8 +6,10 @@ from sqlalchemy.future import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy import update, delete
 from api.app.models import Specialist
-from typing import List
+from typing import List, Union, Dict, Optional, Any
 from enum import Enum
+
+from pydantic import BaseModel
 
 from .. import schemas, crud
 from ..database import get_db
@@ -17,6 +19,69 @@ router = APIRouter(
     prefix="/projects",
     tags=["Projects"],
 )
+# Стили
+class CSSProperties(BaseModel):
+    color: str
+    radius: float
+    width: float
+    fillColor: str
+    strokeColor: str
+    # Add other styles as needed
+
+# Геометрия
+class FeatureGeometry(BaseModel):
+    type: str  # 'Point', 'LineString', 'Polygon'
+    coordinates: Any  # Coordinate array depending on the geometry type
+
+# Свойства геометрии
+class FeatureProperties(BaseModel):
+    pass  # Can contain any keys and values
+
+# Особенности
+class Feature(BaseModel):
+    id: str
+    type: str  # 'Feature'
+    geometry: FeatureGeometry
+    properties: FeatureProperties
+
+# Коллекция особенностей
+class FeatureCollection(BaseModel):
+    type: str  # 'FeatureCollection'
+    features: List[Feature]
+
+# Слой
+class Layer(BaseModel):
+    name: str
+    style: Optional[CSSProperties] = None  # Optional
+    data: FeatureCollection
+
+# Группа слоев
+class GroupLayer(BaseModel):
+    name: str
+    project_id: int
+    layers: List[Layer]
+
+# Ответ с группами слоев
+GroupLayersResponse = List[GroupLayer]
+
+# # Специалист
+# class SpecialistP(BaseModel):
+#     id: int
+#     name: str
+#     role: str
+#     experience_years: float
+
+# # Ответ от сервера /everything
+# class Response(BaseModel):
+#     geometry: Dict[str, Union[str, List[float]]]
+#     id: int
+#     industry_name: str
+#     layers: GroupLayersResponse
+#     n_hours: float
+#     name: str
+#     specialists: List[SpecialistP]
+#     workforce_type: str
+
 
 
 @router.post("/", summary="Create new project", response_model=schemas.ProjectInOut, status_code=status.HTTP_201_CREATED)
@@ -301,6 +366,14 @@ async def get_project_everything(
     layer_crud_instance = crud.LayerCRUD(db)
     layers = await layer_crud_instance.get_layers_by_project(project_id)
 
+    # try:
+    #     # Validate the layers data
+    #     [GroupLayer(**group) for group in layers]
+    #     # return validated_layers
+    # except Exception as e:
+    #     # Handle validation errors
+    #     raise HTTPException(status_code=400, detail=f"Invalid layer data: {str(e)}")
+
     # Fetch project
     proj_crud_instance = crud.ProjectCRUD(db)
     project = await proj_crud_instance.get_project_by_id(project_id)
@@ -308,6 +381,8 @@ async def get_project_everything(
     
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    # print(layers)
 
     # Assemble the response
     return {
@@ -317,6 +392,6 @@ async def get_project_everything(
         "n_hours": project.n_hours,
         "workforce_type": project.workforce_type,
         "geometry": project.geometry,
+        "layer_groups": list(layers.values())[0],
         "specialists": specialists,
-        "layers": layers,
     }
