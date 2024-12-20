@@ -32,6 +32,8 @@ random.seed(0)
 METRIC_CRS = 3857
 DEGREE_CRS = 4326
 
+DISTANCE_TRASHOLD_METERS=.75e6
+
 POPULATION_WEIGHT_COEFF = 1
 FACTORY_SALARY_W_COEFF = 3
 CITY_PARAMS_W_COEFF = 3
@@ -292,11 +294,11 @@ def post_processing(gdf: pd.DataFrame):
 
     assert all(attr in gdf.columns for attr in ["geometry", "flow"])
 
-    MINIMAL_FLOW = 1e-3  # anything beyond is a noise
-    MAXIMAL_FLOW = 4  # anything beyond is a noise
-    DISTANCE_TRASHOLD_METERS = (
-        0.25e6  # 250km as a max value for potential migration, exper evaluation
-    )
+    MINIMAL_FLOW = 1e-6  # anything beyond is a noise
+    MAXIMAL_FLOW = 3  # anything beyond is a noise
+    # DISTANCE_TRASHOLD_METERS = (
+    #     .75e6  # 250km as a max value for potential migration, exper evaluation
+    # )
     # res["attr_diff"] = res["destination_attr"] - res["origin_attr"]
     gdf["distance"] = (
         gpd.GeoSeries(gdf["geometry"], crs=DEGREE_CRS).to_crs(METRIC_CRS).length
@@ -1027,7 +1029,7 @@ directory = "api/app/data"
 
 if filename in os.listdir(directory):
     
-    filepath = os.path.join(directory, 'scaler_wff.pkl')
+    filepath = os.path.join(directory, 'scaler_wff1812.pkl')
     with open(filepath, "rb") as f:
         scaler_x = pickle.load(f)
 
@@ -1038,7 +1040,7 @@ if filename in os.listdir(directory):
     filepath = os.path.join(directory, 'cities.parquet')
     cities = gpd.read_parquet(filepath)
 
-    filepath = os.path.join(directory, 'fdf_fitted.parquet')
+    filepath = os.path.join(directory, 'fdf_fitted1812.parquet')
     # fdf_fitted = gpd.read_parquet(filepath)
 
     
@@ -1061,80 +1063,53 @@ def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None):
         """
         FIX THAT AREA THING
         """
-        # area = wff.initial_cities_state.loc[wff.initial_cities_state['region_city']==city_name, 'geometry'].to_frame().to_crs(METRIC_CRS).buffer(200*1e3).to_crs(DEGREE_CRS).to_frame()
+        area = wff.initial_cities_state.loc[wff.initial_cities_state['region_city']==city_name, 'geometry'].to_frame().to_crs(METRIC_CRS).buffer(DISTANCE_TRASHOLD_METERS).item()
 
         # Update parameters and recalculate if needed
         if updated_params:
             city_mask = wff.cities["region_city"] == city_name
-
-            # original_flows_mask = wff.gdf_links['destination'].isin([city_name])
-
-            # original_flows_mask = wff.gdf_links['destination'].isin([city_name])
-
-            # original_flows = wff.gdf_links[original_flows_mask]
-
-            # original_cities = wff.cities.to_crs(DEGREE_CRS).loc[wff.cities['region_city'].isin(original_flows['origin'])]  
-
-
-            # original_cities = wff.cities.loc[city_mask,:]
-            
-
-            # original_flows = wff.gdf_links[original_flows_mask]
-
-            # original_cities = wff.cities.to_crs(DEGREE_CRS).loc[wff.cities['region_city'].isin(original_flows['origin'])] 
-            # print('\n\n\n\n', updated_params, wff.current_cities_state.loc[city_mask,:].to_dict())
-
             wff.update_city_params(city_name, updated_params)
             wff.recalculate_after_update()
-            # print('\n\n\n\n', wff.current_cities_state.loc[city_mask,:].to_dict())
-
-            # print('\n\n\n\n\n\n\n\n', wff.cities)
-
             new_city_val = wff.cities.loc[city_mask,["flows_in", "flows_out"]].values.tolist()
 
             # Generate differences
             diff = wff.compare_city_states()
             diff_links = wff.compare_link_states()
-            
-            # [gdf.geometry.within(area_polygon)]
 
             mask_links = diff_links["big_flows"] > 0
             links_diff = wff.gdf_links[wff.gdf_links["destination"].isin(diff_links[mask_links]["destination"])]
+            
 
             # Apply masks and save GeoJSONs
-            # mask = diff["in_out_diff"] > 0
             mask2 = diff['region_city'].isin(links_diff['destination'])
             cities_diff = diff[mask2].dropna()
+            
+
             links_diff = links_diff[(links_diff['origin'].isin(cities_diff['region_city'])) \
                                     & (links_diff['destination'].isin([city_name]))]
-            # mask2 = diff['region_city'].isin(links_diff['destination'])
-            # cities_diff = diff[mask2].dropna()
-            # print('\n\n\n\n', type(cities_diff.geometry.item()), type(area),\
-            #        cities_diff[cities_diff.interse])
 
             for col in cities_diff.columns:
                 try:
                     cities_diff[col] = cities_diff[col].round(0).astype(int)
                 except Exception as ex:
-                    print(ex)
+                    print(ex,'__int')
                     # pass
             
-            # print('\n\n\n\n\n\n', cities_diff.merge(original_cities[['region_city', 'in_out_diff']], on='region_city', how='left'))
-            # print({"cities_diff": json.loads(cities_diff.to_json()),
-            #     "links_diff": json.loads(links_diff.to_json()),
-            #     "updated_params": updated_params,
-            #     "updated_in_out_flow_vals": new_city_val,
-            #     'plant': 1})
-
             for v in new_city_val:
                 for k in v:
-                    k = int(k)
+                    try:
+                        k = int(k)
+                    except Exception:
+                        pass
 
             for k,v in updated_params.items():
-                # print(v)
-                v = int(round(v))
-                # print(v)
-                updated_params[k] = v
+                try:
+                    # print(v)
+                    v = int(round(v))
+                    # print(v)
+                    updated_params[k] = v
+                except Exception:
+                    pass
 
             try:
                 del updated_params['population']
@@ -1142,14 +1117,21 @@ def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None):
                 pass
 
             city_mask = wff.cities["region_city"] == city_name
+            print(wff.cities)
 
             # original_flows_mask = wff.gdf_links['destination'].isin([city_name])
 
             original_flows_mask = wff.gdf_links['destination'].isin([city_name])
+            print(wff.gdf_links)
 
             original_flows = wff.gdf_links[original_flows_mask]
+            print(original_flows)
 
-            original_cities = wff.cities.to_crs(DEGREE_CRS).loc[wff.cities['region_city'].isin(original_flows['origin'])]  
+            original_cities = wff.cities.to_crs(DEGREE_CRS).loc[wff.cities['region_city'].isin(original_flows['origin'])].to_crs(METRIC_CRS)
+            print(original_cities)
+            original_cities=original_cities[original_cities['geometry'].within(area)]
+            cities_diff = cities_diff[cities_diff['region_city'].isin(original_cities.loc[original_cities['geometry'].within(area), 'region_city'])]
+            print(original_cities)
             
             # print(updated_params, new_city_val)
             # print('\n\n\n\nGO\n\n\n\n',original_cities.merge(cities_diff[['region_city', 'in_out_diff']], on='region_city', how='right'))
@@ -1158,10 +1140,17 @@ def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None):
                     uinput_spec_num=specs,
                     uinput_industry=industry,
                     closest_cities=original_cities.merge(cities_diff[['region_city', 'in_out_diff']], on='region_city', how='right'))
+                # print(original_cities.columns)
+                # original_cities=gpd.GeoDataFrame(original_cities, geometry='geometry') 
+                # original_cities=original_cities[original_cities['geometry'].within(area)]
+                print(original_cities)
             except Exception as ex:
-                print(ex)
+                print(ex, '___do_estimate')
                 raise ex
             # print(plant_assessment_val, cities_diff)
+            # original_cities = original_cities['region_city'].isin(original_flows['origin'])
+            # print(original_cities)
+            
 
             def calculate_average_prov(data):
                 prov_values = []
@@ -1190,6 +1179,8 @@ def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None):
             # plant_assessment_val = calculate_average_prov(plant_assessment_val)
 
             # print('\n\n\n\n\nplant_assessment_val', calculate_average_prov(plant_assessment_val), plant_assessment_val)
+            print(plant_assessment_val, new_city_val, calculate_average_prov(plant_assessment_val))
+            city_spec_new = new_city_val[0][0] / new_city_val[0][1]
 
             return {
                 "cities_diff": json.loads(cities_diff.to_json()),
@@ -1197,7 +1188,8 @@ def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None):
                 "updated_params": updated_params,
                 "updated_in_out_flow_vals": new_city_val,
                 'plant': plant_assessment_val,
-                'plant_total': calculate_average_prov(plant_assessment_val)
+                'plant_total': calculate_average_prov(plant_assessment_val),
+                'city_spec_new':city_spec_new
             }
 
         # Return original flows without updates

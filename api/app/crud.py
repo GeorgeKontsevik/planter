@@ -231,7 +231,10 @@ class LayerCRUD:
                             "ueqi_social_and_leisure_infrastructure":layer.ueqi_social_and_leisure_infrastructure,
                             "ueqi_street_networks":layer.ueqi_street_networks,
                             "median_salary":layer.median_salary,
-                            'estimate':layer.estimate
+                            'estimate':layer.estimate,
+                            "specialists_data":layer.specialists_data,
+
+                            "hours":layer.hours
 
                         }
                     }
@@ -276,7 +279,9 @@ class LayerCRUD:
                                     "ueqi_social_and_leisure_infrastructure":layer.ueqi_social_and_leisure_infrastructure,
                                     "ueqi_street_networks":layer.ueqi_street_networks,
                                     "median_salary":layer.median_salary,
-                                    'estimate':layer.estimate
+                                    'estimate':layer.estimate,
+                                    "specialists_data":layer.specialists_data,
+                                    "hours":layer.hours
 
                                 }
                             }
@@ -387,7 +392,9 @@ class LayerCRUD:
                         ueqi_street_networks=f.get("ueqi_street_networks"),
 
                         median_salary=f.get("median_salary"),
-                        estimate=f.get("estimate")
+                        estimate=f.get("estimate"),
+                        specialists_data=f.get('specialists_data'),
+                        hours=f.get("hours")
                     )
                     layers.append(layer)
 

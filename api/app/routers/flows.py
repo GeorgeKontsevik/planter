@@ -29,6 +29,8 @@ async def calculate_flows_custom(request=Body(...)):
     city_name = request["city"]
     updated_params = request["updated_params"]
     industry = request["industry_name"]
+    if industry=='wood_processing':
+        industry='chemicals'
     specs = request["specialists"]
     
     return do_reflow(city_name, updated_params, industry, specs)

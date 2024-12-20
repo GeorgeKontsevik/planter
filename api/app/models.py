@@ -80,6 +80,7 @@ class Layer(Base):
     name = Column(String, nullable=True)
     geometry = Column(Geometry, nullable=False)  # Ensure geometry is required
     style = Column(JSON, nullable=True)
+    specialists_data=Column(JSON, nullable=True)
     big_flows = Column(JSON, nullable=True)  # Allow for big_flows JSON data
     destination = Column(String, nullable=True)  # Adapt based on your model
     destination_attr = Column(Integer, nullable=True)  # Adapt based on your model
@@ -108,6 +109,7 @@ class Layer(Base):
     ueqi_street_networks=Column(Integer,nullable=True)
     median_salary=Column(Integer, nullable=True)
     estimate=Column(Float, nullable=True)
+    hours=Column(Float, nullable=True)
 
     
 
@@ -116,7 +118,8 @@ class Layer(Base):
                  distance=None, flow=None, origin=None, origin_attr=None, population=None, 
                  scaled_flows_forvis=None, layer_mini_ids=None, duration=None, in_diff=None, out_diff=None,in_out_diff=None,
                  city_category=None,factories_total=None,harsh_climate=None,migrations_from_each_city=None,region_city=None,ueqi_citywide_space=None,ueqi_green_spaces=None, ueqi_public_and_business_infrastructure=None,ueqi_residential=None,ueqi_social_and_leisure_infrastructure=None,ueqi_street_networks=None,
-                 median_salary=None, estimate=None
+                 median_salary=None, estimate=None,specialists_data=None,
+                 hours=None
                  ):
         
         self.project_id = project_id
@@ -153,5 +156,8 @@ class Layer(Base):
 
         self.median_salary=median_salary
         self.estimate=estimate
+        self.specialists_data=specialists_data
+
+        self.hours=hours
     # Define the relationship with Project
     project = relationship("Project", back_populates="layers")

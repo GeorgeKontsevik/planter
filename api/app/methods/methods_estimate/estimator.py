@@ -65,13 +65,18 @@ def do_estimate(
     competitor_fatories = []
 
     city_names = closest_cities["region_city"].values
+    print(city_names)
 
-    mask = grouped_grads.reset_index(drop=False).loc[:, "cluster_center"].isin(city_names)
+    print(grouped_grads.reset_index(drop=False).iloc[:,:3])
+
+    mask = grouped_grads.reset_index(drop=False).loc[:, "region_city"].isin(city_names)
     grouped_grads = (
         grouped_grads.reset_index(drop=False)
         .loc[mask, :]
         .set_index(["cluster_center", "region_city", "type", "edu_group_code"])
     )
+
+    print(grouped_grads)
 
     mask = cv["region_city"].isin(city_names)
     cv = cv[mask]
@@ -174,6 +179,8 @@ def do_estimate(
     grouped_grads.loc[grouped_grads["type"] == "СПО", "type"] = "graduates"
     grouped_grads.loc[grouped_grads["type"] == "CV", "type"] = "specialists"
 
+    print(grouped_grads)
+
     grouped_grads = (
         grouped_grads.set_index("cluster_center")
         .groupby(["cluster_center", "type", "edu_group_code"])[
@@ -193,6 +200,8 @@ def do_estimate(
             how="left",
         )
     )
+
+    print(grouped_grads)
 
     # grouped_grads
 
@@ -264,7 +273,8 @@ def do_estimate(
     grouped_grads = grouped_grads.explode('specialty').reset_index(drop=True)
 
     # Output the modified DataFrame
-    # print(grouped_grads)
+    print(grouped_grads.columns, grouped_grads)
+    print(grouped_grads.iloc[:,3:])
 
     # Шаг 2: Группировка по cluster_center и specialty для подсчета выпускников и специалистов
     result = grouped_grads.groupby(['cluster_center', 'specialty']).agg({
@@ -272,7 +282,7 @@ def do_estimate(
         'cv_count': 'sum'      # Сумма специалистов
     }).reset_index()
 
-    # print(result)
+    print(result)
 
     # Шаг 3: Переименование столбцов для ясности
     result.rename(columns={'grads': 'total_graduates', 'cv_count': 'total_specialists'}, inplace=True)
@@ -299,7 +309,7 @@ def do_estimate(
         reres.loc[reres['total_specialists'] < 0, 'total_specialists'] = 0
         result = reres
 
-        # print("\n\n\n\n\nRERES\n\n\n\n", reres)
+        print("\n\n\n\n\nRERES\n\n\n\n", reres)
 
     # Выполняем расчеты
     for spec in result['specialty'].unique():

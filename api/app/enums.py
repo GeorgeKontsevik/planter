@@ -16,6 +16,7 @@ class IndustryEnum(str, Enum):
     CHEMICAL = "chemicals"
     PHARMA = "pharmacy"
     ELECTRONICS = "electronics"
+    WOOD_PREPROCESSING="wood_processing"
 
 class SpecialtyEnum(str, Enum):
     OPERATOR = 'Оператор, аппаратчик'

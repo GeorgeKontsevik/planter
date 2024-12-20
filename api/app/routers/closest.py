@@ -88,11 +88,14 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
             raise HTTPException(status_code=500, detail=f"Error fetching ROUTES data: {e}")
 
         try:
+            if query_params.industry_name=='wood_processing':
+                query_params.industry_name='chemicals'
             # print(query_params.specialists)
             params, plant_assessment_val = do_estimate(
                 uinput_spec_num=query_params.specialists,
                 uinput_industry=query_params.industry_name,
                 closest_cities=closest_cities, workforce_type=workforce_type)
+            
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Analysis failed: ESTIMATOR {e}")
@@ -123,6 +126,8 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
         
         # closest_cities["working_population"] = (
         #     (closest_cities["population"] * WORKING_POPULATION_PERCENT).round(0).fillna(0).astype(int)
+        # if industry=='wood_processing':
+        #     industry='chemicals'
         # )
 
         closest_cities.rename(columns={f'factories_{query_params.industry_name}': 'factories_count', f'graduates_{query_params.industry_name}': 'graduates_count'}, inplace=True)
