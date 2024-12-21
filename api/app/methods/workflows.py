@@ -294,7 +294,7 @@ def post_processing(gdf: pd.DataFrame):
 
     assert all(attr in gdf.columns for attr in ["geometry", "flow"])
 
-    MINIMAL_FLOW = 1e-6  # anything beyond is a noise
+    MINIMAL_FLOW = 1e-20  # anything beyond is a noise
     MAXIMAL_FLOW = 3  # anything beyond is a noise
     # DISTANCE_TRASHOLD_METERS = (
     #     .75e6  # 250km as a max value for potential migration, exper evaluation
@@ -1055,14 +1055,24 @@ else:
     raise FileNotFoundError(f"The file {filename} was not found in the directory {directory}.")
 
 
+def get_initial_original_cities(wff, city_name):
+    original_flows_mask = wff.gdf_links['destination'].isin([city_name])
 
-def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None):
+    original_flows = wff.gdf_links[original_flows_mask]
+
+    original_cities = wff.cities.to_crs(DEGREE_CRS).loc[wff.cities['region_city'].isin(original_flows['origin'])]  
+
+    return original_cities
+
+
+def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None, workforce_type=None):
     wff['cities'] = cities
 # %%
     try:
         """
         FIX THAT AREA THING
         """
+
         area = wff.initial_cities_state.loc[wff.initial_cities_state['region_city']==city_name, 'geometry'].to_frame().to_crs(METRIC_CRS).buffer(DISTANCE_TRASHOLD_METERS).item()
 
         # Update parameters and recalculate if needed
@@ -1139,7 +1149,7 @@ def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None):
                 original_cities, plant_assessment_val = do_estimate(
                     uinput_spec_num=specs,
                     uinput_industry=industry,
-                    closest_cities=original_cities.merge(cities_diff[['region_city', 'in_out_diff']], on='region_city', how='right'))
+                    closest_cities=original_cities.merge(cities_diff[['region_city', 'in_out_diff']], on='region_city', how='right'), workforce_type=workforce_type)
                 # print(original_cities.columns)
                 # original_cities=gpd.GeoDataFrame(original_cities, geometry='geometry') 
                 # original_cities=original_cities[original_cities['geometry'].within(area)]
@@ -1196,12 +1206,8 @@ def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None):
         else:
             # print(area)
             
-
-            original_flows_mask = wff.gdf_links['destination'].isin([city_name])
-
-            original_flows = wff.gdf_links[original_flows_mask]
-
-            original_cities = wff.cities.to_crs(DEGREE_CRS).loc[wff.cities['region_city'].isin(original_flows['origin'])]  
+            original_cities = get_initial_original_cities(wff, city_name)
+            
 
             for col in original_cities.columns:
                 try:

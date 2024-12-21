@@ -136,8 +136,8 @@ async def optimize_city(request=Body(...)):
 
             res = res.iloc[0].to_dict()
             # print('\n\n\n\n\n',res,'\n\n\n\n\n')
-
-            return do_reflow(name, updated_params=res, industry=industry, specs=specs)
+            workforce_type= request.get("workforce_type", None)
+            return do_reflow(name, updated_params=res, industry=industry, specs=specs, workforce_type=workforce_type)
         except Exception as ex:
             logger.error(ex)
             raise ex

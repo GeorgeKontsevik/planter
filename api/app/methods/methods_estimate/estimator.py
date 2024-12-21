@@ -38,6 +38,7 @@ def do_estimate(
         pd.DataFrame: Enriched grouped_grads DataFrame with additional metrics.
     """
     initial_cities = closest_cities.copy()
+    print(closest_cities.head(2))
 
     cv = pd.read_parquet('api/app/data/cv.gzip').rename(
         columns={"hh_name": "specialty"})
@@ -68,7 +69,7 @@ def do_estimate(
     print(city_names)
 
     print(grouped_grads.reset_index(drop=False).iloc[:,:3])
-
+    print(sum(grouped_grads.reset_index(drop=False).loc[:, "region_city"].isin(city_names)))
     mask = grouped_grads.reset_index(drop=False).loc[:, "region_city"].isin(city_names)
     grouped_grads = (
         grouped_grads.reset_index(drop=False)
@@ -340,6 +341,8 @@ def do_estimate(
     # Проверяем и обновляем значения в 'prov_specialists'
     result['prov_specialists'] = np.where(result['prov_specialists'] > 1, 1, result['prov_specialists'])
 
+    print(result)
+
     # %%
     plant_assessment_val = dict()
     for spec in uinput_spec_num:
@@ -350,6 +353,11 @@ def do_estimate(
         plant_assessment_val[spec]['prov_specialists'] =  result.loc[result['specialty']==spec, 'prov_specialists'].sum()
 
         plant_assessment_val[spec]['total_graduates'] =   result.loc[ result['specialty']==spec, 'total_graduates'].sum()
+
+        '''
+        BUG FIX WORKAROUND
+        '''
+        plant_assessment_val[spec]['total_graduates'] = 0
 
         plant_assessment_val[spec]['total_specialists'] = result.loc[result['specialty']==spec, 'total_specialists'].sum()
 
