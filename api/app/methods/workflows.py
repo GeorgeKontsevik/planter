@@ -1248,7 +1248,7 @@ def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None, wo
             # print(estimate)
             from pprint import pprint
             pprint(plant_assessment_val)
-            # print(calculate_average_prov(plant_assessment_val))
+            print(estimate_city_prov)
 
             return {
                 "cities_diff": json.loads(cities_diff_ret.to_json()),

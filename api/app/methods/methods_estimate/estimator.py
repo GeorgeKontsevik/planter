@@ -356,7 +356,7 @@ def do_estimate(
             elif workforce_type=='specialists':
                 plant_assessment_val[spec]['all'] = ceil(plant_assessment_val[spec]['total_specialists'])
 
-        estimate_city_prov.append(result.loc[(result['specialty']==spec) & (result['cluster_center']==city_name),['prov_graduates', 'prov_specialists']].sum().mean())
+        estimate_city_prov.append(result.loc[(result['specialty']==spec) & (result['cluster_center']==city_name),['prov_graduates', 'prov_specialists']].mean().sum())
 
     for col in result.columns:
         try:
@@ -395,11 +395,11 @@ def do_estimate(
             return None  # Return None or some indication if no prov values were found
     est = calculate_average_prov(plant_assessment_val, workforce_type)
     print(est)
-    # est = 1 if round(np.mean(estimate),2) > 1 else round(np.mean(estimate),2)
+    estimate_city_prov = 1 if round(np.mean(estimate_city_prov),2) > 1 else round(np.mean(estimate_city_prov),2)
 
     from pprint import pprint
     pprint(plant_assessment_val)
-    print(est)
+    print(est, estimate_city_prov)
     # print(result, plant_assessment_val)
     # print("\nИтоговый DataFrame:")
     # print(result[['specialty', 'total_graduates', 'total_specialists', 'prov_graduates', 'prov_specialists']])
