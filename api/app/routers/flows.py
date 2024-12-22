@@ -35,5 +35,9 @@ async def calculate_flows_custom(request=Body(...)):
 
 
     workforce_type = request.get('workforce_type', None)
+    list_cities_names = []
+    print('\n\n\n\n\n\n\n\n\n',request.get('cities_with_params'))
+    for i in request['cities_with_params']:
+        list_cities_names.append(list(i.keys())[0])
     
-    return do_reflow(city_name, updated_params, industry, specs, workforce_type)
+    return do_reflow(city_name, updated_params, industry, specs, workforce_type, list_cities_names=list_cities_names)

@@ -1062,10 +1062,10 @@ def get_initial_original_cities(wff, city_name):
 
     original_cities = wff.cities.to_crs(DEGREE_CRS).loc[wff.cities['region_city'].isin(original_flows['origin'])]  
 
-    return original_cities
+    return original_cities, original_flows
 
 
-def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None, workforce_type=None):
+def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None, workforce_type=None,list_cities_names=None):
     wff['cities'] = cities
 # %%
     try:
@@ -1081,21 +1081,31 @@ def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None, wo
             wff.update_city_params(city_name, updated_params)
             wff.recalculate_after_update()
             new_city_val = wff.cities.loc[city_mask,["flows_in", "flows_out"]].values.tolist()
+            
+            city_spec_new = new_city_val[0][0] / new_city_val[0][1]
 
             # Generate differences
             diff = wff.compare_city_states()
             diff_links = wff.compare_link_states()
 
             mask_links = diff_links["big_flows"] > 0
-            links_diff = wff.gdf_links[wff.gdf_links["destination"].isin(diff_links[mask_links]["destination"])]
+            mask_links2 = diff_links['destination'] == city_name
+            links_diff = diff_links[mask_links & mask_links2]
             
+            # print(diff, diff_links[mask_links & mask_links2].iloc[:,:])
 
             # Apply masks and save GeoJSONs
-            mask2 = diff['region_city'].isin(links_diff['destination'])
-            cities_diff = diff[mask2].dropna()
+            # mask2 = diff['region_city'].isin(links_diff['destination'])
+            cities_diff = links_diff.loc[:,['origin', 'big_flows']]
+            cities_diff['big_flows']*=-1
+            cities_diff.rename(columns={'origin':'region_city', 'big_flows':'in_out_diff'}, inplace=True)
+
+            # Apply masks and save GeoJSONs
+            mask2 = diff['region_city'].isin(links_diff['origin'])
+            cities_diff_ret = diff[mask2].dropna()
             
 
-            links_diff = links_diff[(links_diff['origin'].isin(cities_diff['region_city'])) \
+            links_diff = links_diff[(links_diff['origin'].isin(cities_diff_ret['region_city'])) \
                                     & (links_diff['destination'].isin([city_name]))]
 
             for col in cities_diff.columns:
@@ -1126,79 +1136,127 @@ def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None, wo
             except Exception:
                 pass
 
-            city_mask = wff.cities["region_city"] == city_name
-            print(wff.cities)
-
-            # original_flows_mask = wff.gdf_links['destination'].isin([city_name])
 
             original_flows_mask = wff.gdf_links['destination'].isin([city_name])
-            print(wff.gdf_links)
+
 
             original_flows = wff.gdf_links[original_flows_mask]
-            print(original_flows)
 
-            original_cities = wff.cities.to_crs(DEGREE_CRS).loc[wff.cities['region_city'].isin(original_flows['origin'])].to_crs(METRIC_CRS)
-            print(original_cities)
+
+            original_cities = wff.cities.loc[wff.cities['region_city'].isin(original_flows['origin'].tolist() + [city_name])].to_crs(METRIC_CRS)
+
+            # print('ORIGINAL', original_cities)
+
             original_cities=original_cities[original_cities['geometry'].within(area)]
-            cities_diff = cities_diff[cities_diff['region_city'].isin(original_cities.loc[original_cities['geometry'].within(area), 'region_city'])]
-            print(original_cities)
+
+            cities_diff = cities_diff[cities_diff['region_city'].isin(original_cities['region_city'])]
+
+
+            # mask_links = diff_links["big_flows"] > 0
+            # mask_links2 = diff_links['origin'] == city_name
+            # links_diff = diff_links[mask_links & mask_links2]
+
+            closest_cities = original_cities.merge(cities_diff[['region_city', 'in_out_diff']], on='region_city', how='left')[['region_city', 'in_out_diff', 'factories_total']]
+
+            val =abs(closest_cities.loc[closest_cities['region_city']!=city_name, 'in_out_diff'].sum()*-1 - links_diff['big_flows'].sum())
+
+            closest_cities.loc[closest_cities['region_city']==city_name, 'in_out_diff'] = val
+
+
+            # print(closest_cities.loc[closest_cities['region_city']==city_name, 'in_out_diff'])
+
             
             # print(updated_params, new_city_val)
             # print('\n\n\n\nGO\n\n\n\n',original_cities.merge(cities_diff[['region_city', 'in_out_diff']], on='region_city', how='right'))
+            # print(list_cities_names,'\n', cities_diff[['region_city', 'in_out_diff']], original_cities, '\n', original_cities[original_cities['region_city'].isin(list_cities_names)].merge(cities_diff[['region_city', 'in_out_diff']], on='region_city', how='left'))
+            # print(original_cities[['region_city', 'factories_total']])
+            # print(cities_diff_ret)
+            cities_diff_ret = cities_diff_ret[cities_diff_ret['region_city'].isin(original_cities['region_city'])]
+
             try:
-                original_cities, plant_assessment_val = do_estimate(
+                params, plant_assessment_val, estimate, estimate_city_prov = do_estimate(
                     uinput_spec_num=specs,
                     uinput_industry=industry,
-                    closest_cities=original_cities.merge(cities_diff[['region_city', 'in_out_diff']], on='region_city', how='right'), workforce_type=workforce_type)
+                    closest_cities=closest_cities, workforce_type=workforce_type, list_cities_names=list_cities_names, city_name=city_name, city_spec_new=city_spec_new)
                 # print(original_cities.columns)
                 # original_cities=gpd.GeoDataFrame(original_cities, geometry='geometry') 
                 # original_cities=original_cities[original_cities['geometry'].within(area)]
-                print(original_cities)
+
             except Exception as ex:
                 print(ex, '___do_estimate')
                 raise ex
             # print(plant_assessment_val, cities_diff)
             # original_cities = original_cities['region_city'].isin(original_flows['origin'])
-            # print(original_cities)
-            
+    
+            # updated_params['estimate'] = 0
 
-            def calculate_average_prov(data):
-                prov_values = []
-                
-                # Access the "plant" level
 
-                for specialty in data.values():
-                    prov_values2 = []
-                    for key, value in specialty.items():
-                        if key.startswith("prov_"):
+            original_cities2 = original_cities.merge(params.drop(columns=['region_city']), left_on='region_city', right_on='cluster_center', how='left').set_index('region_city').fillna(0)
 
-                            prov_values2.append(value)
-                    value = sum(prov_values2)
-                    value = 1 if value>1 else value        
-                    prov_values.append(value)
-                
-                # Calculate the average
-                if prov_values:
-                    avg_prov = sum(prov_values) / len(prov_values)
-                    avg_prov = 1 if avg_prov>1 else avg_prov
-                    return round(avg_prov,2)
-                else:
-                    return None  # Return None or some indication if no prov values were found
+            # Step 2: Group by 'region_city' and aggregate specialists and their values into dictionaries
+            original_cities = original_cities.merge(original_cities2.groupby('region_city').apply(
+                lambda x: {
+                    row['specialty']: {
+                        'prov_graduates': row['prov_graduates'],
+                        'prov_specialists': row['prov_specialists'],
+                        'total_graduates': row['total_graduates'],
+                        'total_specialists': row['total_specialists'],
+                        'all': row['total_specialists'] + row['total_graduates']
+                    } for _, row in x.iterrows()
+                }
+            ).reset_index(name='specialists_data'), on='region_city')
+
+            original_cities.drop(columns=['estimate'], inplace=True)
+            try:
+                original_cities = original_cities.merge(original_cities2.groupby('region_city')[['prov_specialists', 'prov_graduates']].mean().mean(axis=1).to_frame().round(2), on='region_city').rename(columns={0:'estimate'})
+            except Exception as ex:
+                print(ex)
+
 
             # Calculate the average
-            # plant_assessment_val = calculate_average_prov(plant_assessment_val)
-
-            # print('\n\n\n\n\nplant_assessment_val', calculate_average_prov(plant_assessment_val), plant_assessment_val)
-            print(plant_assessment_val, new_city_val, calculate_average_prov(plant_assessment_val))
             city_spec_new = new_city_val[0][0] / new_city_val[0][1]
 
+            # print(plant_assessment_val.keys())
+            for k,v in plant_assessment_val.items():
+                # print(k,v)
+                for kk, vv in v.items():
+                    if 'total' in kk:
+                        plant_assessment_val[k][kk] = int(round(vv))
+                    if 'prov' in kk:
+                        plant_assessment_val[k][kk] = round(vv,3)
+
+            # # print(plant_assessment_val)
+            # for k,v in specs:
+            #     pass
+            # est = []
+            import numpy as np
+            # print(estimate)
+            # for p in estimate:
+                # print(p)
+            updated_params['estimate']=estimate_city_prov
+
+            # print('\n\n\n\n\n',
+            #     {"updated_params": updated_params,
+            #     "updated_in_out_flow_vals": new_city_val,
+            #     'plant': plant_assessment_val,
+            #     'plant_total': calculate_average_prov(plant_assessment_val),
+            #     'city_spec_new':city_spec_new}
+            # )
+
+            # print(cities_diff_ret)
+            # print(new_city_val)
+            # print(estimate)
+            from pprint import pprint
+            pprint(plant_assessment_val)
+            # print(calculate_average_prov(plant_assessment_val))
+
             return {
-                "cities_diff": json.loads(cities_diff.to_json()),
+                "cities_diff": json.loads(cities_diff_ret.to_json()),
                 "links_diff": json.loads(links_diff.to_json()),
                 "updated_params": updated_params,
                 "updated_in_out_flow_vals": new_city_val,
                 'plant': plant_assessment_val,
-                'plant_total': calculate_average_prov(plant_assessment_val),
+                'plant_total': estimate,
                 'city_spec_new':city_spec_new
             }
 
@@ -1206,19 +1264,19 @@ def do_reflow(city_name, updated_params:dict=None, industry=None, specs=None, wo
         else:
             # print(area)
             
-            original_cities = get_initial_original_cities(wff, city_name)
+            original_cities, original_flows = get_initial_original_cities(wff, city_name)
             
 
             for col in original_cities.columns:
                 try:
                     original_cities[col] = original_cities[col].round(0).astype(int)
-                except Exception:
+                except Exception:   
                     pass
             
             original_cities.drop(columns=['h3_index', 'median_salary', 'num_in_migration',
        'estimate', 'norm_outflow', 'city_attractiveness_coeff',
        'flows_in', 'flows_out'], inplace=True)
-            print(original_cities.columns)
+            # print(original_cities.columns)
 
             return {"cities_diff": json.loads(original_cities.to_json()),
                     'links_diff': json.loads(original_flows.to_json()),}

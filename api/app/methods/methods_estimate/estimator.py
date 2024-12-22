@@ -23,7 +23,7 @@ from math import ceil
 
 
 def do_estimate(
-    uinput_spec_num: List[dict], uinput_industry: str, closest_cities, workforce_type=None) -> pd.DataFrame:
+    uinput_spec_num: List[dict], uinput_industry: str, closest_cities, workforce_type=None, list_cities_names=None, city_name=None, city_spec_new=None, added_grads=0) -> pd.DataFrame:
     """
     Perform competitor analysis and enrich the grouped_grads DataFrame with competitor-related metrics.
 
@@ -37,11 +37,17 @@ def do_estimate(
     Returns:
         pd.DataFrame: Enriched grouped_grads DataFrame with additional metrics.
     """
+    print(workforce_type)
+    
     initial_cities = closest_cities.copy()
-    print(closest_cities.head(2))
 
-    cv = pd.read_parquet('api/app/data/cv.gzip').rename(
-        columns={"hh_name": "specialty"})
+    # print('\n\n\n\n\n\n INITIAL CITIES\n\n\n\n\n',initial_cities)
+    
+    if list_cities_names:
+        city_names=list_cities_names
+    else:
+        city_names = closest_cities["region_city"].values # суда новый список
+
     ontology = pd.read_pickle("api/app/data/new_ontology.pkl")
 
     grouped_grads = pd.read_pickle("api/app/data/grouped_grads.pkl")
@@ -57,35 +63,24 @@ def do_estimate(
 
 
     uinput_spec_num = uinput_spec_num_0
-    # print('\n\n\n\n', uinput_spec_num)
-    YEAR = 2021
-    cv = cv[cv["year"] == YEAR]
 
     uinput_spec_num_2 = {}
     competitor_industries = []
     competitor_fatories = []
 
-    city_names = closest_cities["region_city"].values
-    print(city_names)
-
-    print(grouped_grads.reset_index(drop=False).iloc[:,:3])
-    print(sum(grouped_grads.reset_index(drop=False).loc[:, "region_city"].isin(city_names)))
+    # print('\n',city_names,'\n')
     mask = grouped_grads.reset_index(drop=False).loc[:, "region_city"].isin(city_names)
     grouped_grads = (
         grouped_grads.reset_index(drop=False)
         .loc[mask, :]
         .set_index(["cluster_center", "region_city", "type", "edu_group_code"])
-    )
+    ).fillna(10)
 
-    print(grouped_grads)
-
-    mask = cv["region_city"].isin(city_names)
-    cv = cv[mask]
+    # print(grouped_grads)
 
     # %%
     ontology.rename(columns={'speciality': 'specialty'}, inplace=True)
-    cv = cv.merge(ontology[["specialty", "edu_group_code"]], on="specialty")
-    cv["type"] = "CV"
+
     # --- START ---
     """
     Эта штука завязана на входных профессиях и индустрии,
@@ -109,7 +104,7 @@ def do_estimate(
             .tolist()
             )
         
-    # print('\n\n\n\n\n', uinput_spec_num_2)
+
     # --- START ---
 
     competitor_industries = set(competitor_industries)
@@ -135,44 +130,20 @@ def do_estimate(
 
     closest_cities["competitors_factories_num"] = closest_cities[competitor_fatories].sum(axis=1)
 
-    # print(competitor_industries)
-    # print(grad_col, fact_col, competitor_fatories)
-
-    # %%
-    # uinput_spec_num_2
-
     # %%
     groups = []
 
     for k, v in uinput_spec_num_2.items():
         groups += v
 
-    # %%
     groups = set(groups)
-
-    # print('\n',groups, '\n')
-
-    # %%
-    # groups
-
-    # %%
-    cv.drop_duplicates(subset=["specialty", "edu_group_code"])
-
-    # %%
-    # grouped_grads
 
     # %%
     grouped_grads.reset_index(drop=False, inplace=True)
     mask_groups = grouped_grads["edu_group_code"].isin(groups)
     grouped_grads = grouped_grads[mask_groups]
+    grouped_grads["id_cv"] = grouped_grads["id_cv"].fillna(10)
 
-    # print(grouped_grads.head().iloc[:,2:])
-
-    # %%
-    # grouped_grads
-
-    # %%
-    # grouped_grads.loc[grouped_grads["type"] == "ВПО"]
     grouped_grads.rename(columns={'id_cv':'cv_count'}, inplace=True)
 
     # %%
@@ -180,8 +151,7 @@ def do_estimate(
     grouped_grads.loc[grouped_grads["type"] == "СПО", "type"] = "graduates"
     grouped_grads.loc[grouped_grads["type"] == "CV", "type"] = "specialists"
 
-    print(grouped_grads)
-
+    # print('\n\n\n\n\n\n\n\n\nBEFORE JOIN', grouped_grads, closest_cities)
     grouped_grads = (
         grouped_grads.set_index("cluster_center")
         .groupby(["cluster_center", "type", "edu_group_code"])[
@@ -190,7 +160,7 @@ def do_estimate(
         .sum()
         .join(
             closest_cities[
-                ["region_city", "population"]
+                ["region_city"]
                 + grad_col
                 + fact_col
                 + ["factories_total"]
@@ -202,26 +172,15 @@ def do_estimate(
         )
     )
 
-    print(grouped_grads)
-
-    # grouped_grads
-
-    # %%
-    # grouped_grads["working_population"] = (
-    #     (grouped_grads["population"] * 0.65).round(0).astype(int)
-    # )
-    # print(grouped_grads)
-
-    grouped_grads.drop(columns=["population"], inplace=True)
-
     grouped_grads = grouped_grads.drop(
         columns=[
             "city_capacity_grads_and_cv_sum",
             # "num_in_migration",
-            # "working_population",
             "factories_total",
         ]
     ).rename(columns={"graduates_per_year_forecast": "grads"})
+
+    # print(grouped_grads)
 
     # %%
     """
@@ -247,18 +206,6 @@ def do_estimate(
     grouped_grads.reset_index(inplace=True)
 
     # %%
-    # uinput_spec_num
-
-    # %%
-    # uinput_spec_num_2
-
-    # # %%
-    # plant_attr_coef
-
-    # %%
-    # grouped_grads
-    # print(grouped_grads.head(3))
-    # %%
     # Шаг 1: Создание нового столбца 'specialty' на основе словаря
     def map_specialty(edu_code):
         specialties = []  # Create a list to collect specialties
@@ -273,20 +220,42 @@ def do_estimate(
     # Now explode the DataFrame to create new rows for each specialty
     grouped_grads = grouped_grads.explode('specialty').reset_index(drop=True)
 
-    # Output the modified DataFrame
-    print(grouped_grads.columns, grouped_grads)
-    print(grouped_grads.iloc[:,3:])
-
+    # Output the modified DataFram
+    # print(grouped_grads)
     # Шаг 2: Группировка по cluster_center и specialty для подсчета выпускников и специалистов
+
+    
+
     result = grouped_grads.groupby(['cluster_center', 'specialty']).agg({
         'grads': 'sum',        # Сумма выпускников
         'cv_count': 'sum'      # Сумма специалистов
     }).reset_index()
 
-    print(result)
+    # print(result.loc[result['cluster_center']==city_name])
+
+    if city_name:
+        for specialty, _ in uinput_spec_num_2.items():
+            if specialty not in result.loc[result['cluster_center']==city_name, 'specialty']:
+                new_row = pd.DataFrame({
+                    'cluster_center': [city_name],
+                    'specialty': specialty,
+                    'grads': added_grads,
+                    # 'grads': result.loc[(result['cluster_center']==city_name)&(result['specialty']==specialty), 'grads'].item(),
+                    'cv_count': 10
+                })
+
+                # Concatenate the original DataFrame with the new rows
+                result = pd.concat([result, new_row], ignore_index=True)
+
 
     # Шаг 3: Переименование столбцов для ясности
     result.rename(columns={'grads': 'total_graduates', 'cv_count': 'total_specialists'}, inplace=True)
+
+    # print(result.loc[result['cluster_center']==city_name])
+
+    if list_cities_names:
+        result = result[result['cluster_center'].isin(list_cities_names)]
+        # print(result)
 
 
     # %%
@@ -303,14 +272,19 @@ def do_estimate(
 
     # print("\nУникальные специальности:")
     if 'in_out_diff' in initial_cities.columns:
-        # print(result, initial_cities)
-        reres = result.merge(initial_cities[['region_city', 'in_out_diff']], left_on='cluster_center', right_on='region_city')
+    #     # print(result, initial_cities)
+        result = result.merge(initial_cities[['region_city', 'in_out_diff']], left_on='cluster_center', right_on='region_city')
 
-        reres['total_specialists'] += reres['in_out_diff']
-        reres.loc[reres['total_specialists'] < 0, 'total_specialists'] = 0
-        result = reres
+    #     reres['total_specialists'] += reres['in_out_diff']
+    #     reres.loc[reres['total_specialists'] < 0, 'total_specialists'] = 0
+        
 
-        print("\n\n\n\n\nRERES\n\n\n\n", reres)
+    #     # print("\n\n\n\n\nRERES\n\n\n\n", result,initial_cities, reres)
+    #     result = reres
+
+    result.loc[result['cluster_center']==city_name, 'total_specialists'] *= city_spec_new
+
+    
 
     # Выполняем расчеты
     for spec in result['specialty'].unique():
@@ -320,8 +294,8 @@ def do_estimate(
             
             
             # Логика расчета
-            grads_values = result.loc[result['specialty'] == spec, 'total_graduates'].fillna(0) / factor
-            specialists_values = result.loc[result['specialty'] == spec, 'total_specialists'].fillna(0) / factor
+            grads_values = result.loc[result['specialty'] == spec, 'total_graduates'].fillna(10) / factor
+            specialists_values = result.loc[result['specialty'] == spec, 'total_specialists'].fillna(10) / factor
             
             # Устанавливаем значения напрямую
             result.loc[result['specialty'] == spec, 'prov_graduates'] = round(grads_values,2)
@@ -330,8 +304,7 @@ def do_estimate(
             print(f"Специальность '{spec}' не найдена в словаре.")
     # print(result)
     # Проверяем итоговый результат
-    # print("\nИтоговый DataFrame:")
-    # print(result[['specialty', 'total_graduates', 'total_specialists', 'prov_graduates', 'prov_specialists']])
+    
 
     # %%
 
@@ -341,12 +314,20 @@ def do_estimate(
     # Проверяем и обновляем значения в 'prov_specialists'
     result['prov_specialists'] = np.where(result['prov_specialists'] > 1, 1, result['prov_specialists'])
 
+    # print(result[['specialty','total_graduates']].groupby('specialty').sum())
+    # print(result['cluster_center'])
+    # print(len(result['cluster_center']))
+    # print(len(list_cities_names))
+
+    estimate_city_prov = []
     print(result)
 
     # %%
     plant_assessment_val = dict()
     for spec in uinput_spec_num:
+        # print(result.loc[(result['specialty']==spec) & (result['cluster_center']==city_name)])
         plant_assessment_val[spec] = dict()
+        
 
         plant_assessment_val[spec]['prov_graduates'] =result.loc[  result['specialty']==spec, 'prov_graduates'].sum()
 
@@ -357,7 +338,7 @@ def do_estimate(
         '''
         BUG FIX WORKAROUND
         '''
-        plant_assessment_val[spec]['total_graduates'] = 0
+        # plant_assessment_val[spec]['total_graduates'] = 0
 
         plant_assessment_val[spec]['total_specialists'] = result.loc[result['specialty']==spec, 'total_specialists'].sum()
 
@@ -375,11 +356,52 @@ def do_estimate(
             elif workforce_type=='specialists':
                 plant_assessment_val[spec]['all'] = ceil(plant_assessment_val[spec]['total_specialists'])
 
+        estimate_city_prov.append(result.loc[(result['specialty']==spec) & (result['cluster_center']==city_name),['prov_graduates', 'prov_specialists']].sum().mean())
+
     for col in result.columns:
         try:
-            result[col] = round(result[col])
-            result[col] = result[col].astype(int)
+            result[col] = result[col].round(2)
+            # result[col] = result[col].astype(int)
         except Exception:
             pass
+    
+    def calculate_average_prov(plant_assessment_val, workforce_type=None):
+        prov_values = []
+        print(plant_assessment_val)
+        # Access the "plant" level
 
-    return result, plant_assessment_val
+        for specialty in plant_assessment_val.values():
+            prov_values2 = []
+            for key, value in specialty.items():
+                if key.startswith("prov_"):
+                    print('prov____', workforce_type, key)
+                    if workforce_type:
+                        if workforce_type !='all' and workforce_type not in key:
+                            continue
+                    print(prov_values2, '_____')
+                    prov_values2.append(value)
+            
+            value = sum(prov_values2)
+            value = 1 if value>1 else value
+            prov_values.append(value)
+        
+        # Calculate the average
+        if prov_values:
+            print(prov_values)
+            avg_prov = sum(prov_values) / len(prov_values)
+            avg_prov = 1 if avg_prov>1 else avg_prov
+            return round(avg_prov,2)
+        else:
+            return None  # Return None or some indication if no prov values were found
+    est = calculate_average_prov(plant_assessment_val, workforce_type)
+    print(est)
+    # est = 1 if round(np.mean(estimate),2) > 1 else round(np.mean(estimate),2)
+
+    from pprint import pprint
+    pprint(plant_assessment_val)
+    print(est)
+    # print(result, plant_assessment_val)
+    # print("\nИтоговый DataFrame:")
+    # print(result[['specialty', 'total_graduates', 'total_specialists', 'prov_graduates', 'prov_specialists']])
+    
+    return result, plant_assessment_val, est, estimate_city_prov

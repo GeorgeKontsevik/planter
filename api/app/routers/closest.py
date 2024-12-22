@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from typing import Dict
 import pandas as pd
 from math import ceil
+from pprint import pprint
 
 from api.app.utils.data_reader import cities
 from api.app.methods.methods_get_closest.select_closest_cities import find_n_closest_cities
@@ -91,7 +92,10 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
             if query_params.industry_name=='wood_processing':
                 query_params.industry_name='chemicals'
             # print(query_params.specialists)
-            params, plant_assessment_val = do_estimate(
+
+            print(workforce_type)
+            
+            params, plant_assessment_val, estimate, _ = do_estimate(
                 uinput_spec_num=query_params.specialists,
                 uinput_industry=query_params.industry_name,
                 closest_cities=closest_cities, workforce_type=workforce_type)
@@ -99,10 +103,16 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
 
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Analysis failed: ESTIMATOR {e}")
+        
+        print(params.iloc[:,-3:])
 
         closest_cities2 = closest_cities.drop(columns=['h3_index']).merge(params, left_on='region_city', right_on='cluster_center', how='left').set_index('region_city').fillna(0)
 
+        closest_cities.drop(columns=['estimate'], inplace=True)
+
         # Step 2: Group by 'region_city' and aggregate specialists and their values into dictionaries
+        # print(closest_cities, closest_cities2)
+
         closest_cities = closest_cities.merge(closest_cities2.groupby('region_city').apply(
             lambda x: {
                 row['specialty']: {
@@ -115,11 +125,13 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
             }
         ).reset_index(name='specialists_data'), on='region_city')
 
-        closest_cities.drop(columns=['estimate'], inplace=True)
+        # print(closest_cities, closest_cities2)
         try:
             closest_cities = closest_cities.merge(closest_cities2.groupby('region_city')[['prov_specialists', 'prov_graduates']].mean().mean(axis=1).to_frame().round(2), on='region_city').rename(columns={0:'estimate'})
         except Exception as ex:
             print(ex)
+
+        # print(closest_cities, closest_cities2)
         # closest_cities = closest_cities.merge(closest_cities2.groupby('region_city')[['prov_specialists', 'prov_graduates']].mean(axis=1)
         # .reset_index(name='estimate'), on='region_city')
         # closest_cities['specialists_data'] = closest_cities['specialists_data'].astype(str)
@@ -178,7 +190,7 @@ def get_closest_cities(query_params: schemas.ClosestCitiesQueryParamsRequest,
         
         print('\n\n\n\n\nplant_assessment_val', calculate_average_prov(plant_assessment_val, workforce_type), plant_assessment_val)
 
-        closest_cities['percent_grads'] = 1
+        closest_cities['percent_grads'] = 100
 
         response = {
             "estimates": json.loads(closest_cities.to_json()),

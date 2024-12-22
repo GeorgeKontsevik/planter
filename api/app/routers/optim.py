@@ -14,6 +14,7 @@ from .. import schemas
 from ..methods.methods_recalc._model_preprocesser import preprocess_x
 from ..methods.methods_recalc.recalc_optim import objective
 from api.app.methods.workflows import do_reflow
+import time
 
 router = APIRouter(
     prefix="/flows",
@@ -66,6 +67,11 @@ async def optimize_city(request=Body(...)):
     name = request["city"]
     industry = request["industry_name"]
     specs = request["specialists"]
+
+    
+    # print(list_cities_names)
+    # time.sleep(4)
+
 
     try:
         # Fetch the city from the dataset
@@ -137,7 +143,13 @@ async def optimize_city(request=Body(...)):
             res = res.iloc[0].to_dict()
             # print('\n\n\n\n\n',res,'\n\n\n\n\n')
             workforce_type= request.get("workforce_type", None)
-            return do_reflow(name, updated_params=res, industry=industry, specs=specs, workforce_type=workforce_type)
+
+            list_cities_names = []
+            print('\n\n\n\n\n\n\n\n\n',request['cities_with_params'])
+            for i in request['cities_with_params']:
+                list_cities_names.append(list(i.keys())[0])
+
+            return do_reflow(name, updated_params=res, industry=industry, specs=specs, workforce_type=workforce_type,list_cities_names=list_cities_names)
         except Exception as ex:
             logger.error(ex)
             raise ex
