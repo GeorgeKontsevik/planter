@@ -1,4 +1,3 @@
-# Makefile
 SHELL := /bin/bash
 
 # Default environment variables
@@ -7,12 +6,6 @@ PORT = 8000
 APP = api.app.main:app
 WORKERS = 1
 RELOAD = --reload
-
-# env:
-# 	. /opt/homebrew/anaconda3/bin/activate && conda activate /opt/homebrew/anaconda3/envs/for_mob;
-
-grok:
-	ngrok http 8000
 
 # Run FastAPI in development mode
 run:
@@ -31,14 +24,18 @@ clean:
 killport:
 	lsof -ti :$(PORT) | xargs kill -9 || echo "No process is using port $(PORT)"
 
+# Install Python dependencies
 install:
 	pip install -r reqs.txt
 
+# Run tests
 test:
 	pytest tests/
 
+# Lint code
 lint:
 	flake8 .
 
+# Format code
 format:
 	black .

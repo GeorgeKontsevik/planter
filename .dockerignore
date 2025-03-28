@@ -1,0 +1,9 @@
+old/
+dev/
+examples/
+*.feather
+*.geojson
+*.parquet
+*.ipynb
+(unused)_db_data_loader/
+screenshots/
